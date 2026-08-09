@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Fuse from 'fuse.js';
+import { getImageUrl } from './dishImages';
 import './App.css';
 
 const CATEGORY_LABELS = {
@@ -103,111 +104,6 @@ function App() {
     { value: "under_500", label: "Under ₹500" },
     { value: "under_600", label: "Under ₹600" },
   ];
-
-  // Image URL mapping by category and name
-  const getImageUrl = (category, name = "") => {
-    const lowerName = name.toLowerCase();
-    
-    // South Indian
-    if (category === "south_indian") {
-      if (lowerName.includes("dosa")) {
-        return "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=500&q=80";
-      }
-      // Idli, Vada, Uttapam
-      return "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Pav Bhaji
-    if (category === "pav_bhaji") {
-      return "https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Snacks (Samosa, Pakoda, Vada)
-    if (category === "snacks") {
-      return "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Chaat
-    if (category === "chaat") {
-      return "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Pizza & Burger
-    if (category === "pizza_burger") {
-      if (lowerName.includes("pizza")) {
-        return "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=500&q=80";
-      }
-      // Burger & Sandwich
-      return "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Sandwich
-    if (category === "sandwich") {
-      return "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Main Course
-    if (category === "main_course") {
-      if (lowerName.includes("dal") || lowerName.includes("dhal")) {
-        return "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=500&q=80";
-      }
-      // Paneer, Curries, etc.
-      return "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Rice & Biryani
-    if (category === "rice") {
-      return "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Chinese Noodles & Rice
-    if (category === "chinese_noodles_rice") {
-      return "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Chinese Starters & Main Course
-    if (category === "chinese_starters" || category === "chinese_main_course") {
-      return "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Milkshakes & Juices
-    if (category === "milkshake" || category === "lassi" || category === "fresh_juices") {
-      return "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Desserts (Gulab Jamun, Kulfi, Falooda, Scoops)
-    if (category === "dessert" || category === "kulfi" || category === "falooda" || category === "scoops") {
-      return "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Starters (Tandoori)
-    if (category === "starters") {
-      return "https://images.unsplash.com/photo-1555939594-58d7cb561404?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Salad
-    if (category === "salad") {
-      return "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Soup
-    if (category === "soup") {
-      return "https://images.unsplash.com/photo-1547592166-7aae4d755744?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Baked Dishes
-    if (category === "baked_dishes") {
-      return "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Extras
-    if (category === "extras") {
-      return "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=500&q=80";
-    }
-    
-    // Default fallback
-    return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80";
-  };
 
   const rawDishes = [
     { id: 1, name: "Steam Idli", price: 55, category: "south_indian", image: getImageUrl("south_indian", "Steam Idli") },
@@ -806,52 +702,107 @@ function MenuGrid({ items }) {
 }
 
 function DishCard({ item }) {
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isOpen, setIsOpen] = React.useState(false);
   const ingredients = item.ingredients ?? [];
-  const fallbackImage = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80";
+  const fallbackImage = "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=500&q=80";
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen]);
 
   return (
-    <div className="dish-card" onClick={() => setIsExpanded(!isExpanded)}>
-      <img 
-        src={item.image || fallbackImage} 
-        alt={item.name} 
-        className="dish-img"
-        onError={(e) => {
-          e.target.src = fallbackImage;
-        }}
-      />
+    <>
+      <div className="dish-card" onClick={() => setIsOpen(true)}>
+        <img
+          src={item.image || fallbackImage}
+          alt={item.name}
+          className="dish-img"
+          onError={(e) => {
+            e.target.src = fallbackImage;
+          }}
+        />
 
-      <div className="card-header">
-        <h3 className="card-name">{item.name}</h3>
-        <div className="card-price">₹{item.price}</div>
+        <div className="card-header">
+          <h3 className="card-name">{item.name}</h3>
+          <div className="card-price">₹{item.price}</div>
+        </div>
+
+        <div className="card-ingredients-preview">
+          {ingredients.slice(0, 2).map((ing, idx) => (
+            <span key={idx} className="ingredient-tag">{ing}</span>
+          ))}
+          {ingredients.length > 2 && (
+            <span className="ingredient-tag more">+{ingredients.length - 2} more</span>
+          )}
+        </div>
+
+        <div className="card-footer">
+          <p className="click-hint">Click for ingredients</p>
+        </div>
       </div>
 
-      <div className="card-ingredients-preview">
-       {ingredients.slice(0, 2).map((ing, idx) => (
-          <span key={idx} className="ingredient-tag">{ing}</span>
-        ))}
-       {ingredients.length > 2 && (
-          <span className="ingredient-tag more">+{ingredients.length - 2} more</span>
-        )}
-      </div>
+      {isOpen && (
+        <div
+          className="dish-modal-overlay"
+          onClick={() => setIsOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="dish-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={item.name}
+          >
+            <button
+              type="button"
+              className="dish-modal-close"
+              onClick={() => setIsOpen(false)}
+              aria-label="Close"
+            >
+              ×
+            </button>
 
-      {isExpanded && (
-        <div className="card-expanded">
-          <div className="card-ingredients-full">
-            <p className="ingredients-label">Ingredients:</p>
-            <div className="ingredients-list">
-              {ingredients.map((ing, idx) => (
-                <span key={idx} className="ingredient-full">{ing}</span>
-              ))}
+            <img
+              src={item.image || fallbackImage}
+              alt={item.name}
+              className="dish-modal-img"
+              onError={(e) => {
+                e.target.src = fallbackImage;
+              }}
+            />
+
+            <div className="dish-modal-body">
+              <div className="dish-modal-header">
+                <h3 className="dish-modal-name">{item.name}</h3>
+                <div className="card-price">₹{item.price}</div>
+              </div>
+
+              <p className="ingredients-label">Ingredients:</p>
+              <div className="ingredients-list">
+                {ingredients.length > 0 ? (
+                  ingredients.map((ing, idx) => (
+                    <span key={idx} className="ingredient-full">{ing}</span>
+                  ))
+                ) : (
+                  <span className="ingredient-full">No ingredients listed</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
-
-      <div className="card-footer">
-        <p className="click-hint">{isExpanded ? "Click to hide details" : "Click for ingredients"}</p>
-      </div>
-    </div>
+    </>
   );
 }
 
