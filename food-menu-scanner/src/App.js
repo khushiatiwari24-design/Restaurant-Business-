@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Fuse from 'fuse.js';
 import { getImageUrl } from './dishImages';
+import SiteNavbar from './components/SiteNavbar';
 import './App.css';
 
 const CATEGORY_LABELS = {
@@ -480,6 +481,7 @@ function App() {
 
   return (
     <div className="app">
+      <SiteNavbar />
       <HeroSection onExploreMenu={scrollToSearch} />
       <SearchAndFilter 
         id="menu-search"
