@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import ImageUploadField from '../components/ImageUploadField';
+import { resolveImageUrl } from '../services/mediaApi';
 import {
   activateRestaurant,
   getRestaurant,
@@ -25,6 +27,8 @@ export default function RestaurantDetailPage() {
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -36,6 +40,8 @@ export default function RestaurantDetailPage() {
         name: data.name,
         slug: data.slug,
         description: data.description || '',
+        logoUrl: data.logoUrl || '',
+        coverUrl: data.coverUrl || '',
         phone: data.phone,
         email: data.email,
         address: data.address,
@@ -46,6 +52,8 @@ export default function RestaurantDetailPage() {
         adminEmail: data.admin?.email || '',
         adminPhone: data.admin?.phone || '',
       });
+      setLogoFile(null);
+      setCoverFile(null);
     } catch (err) {
       setError(err.message || 'Failed to load restaurant.');
     } finally {
@@ -62,10 +70,16 @@ export default function RestaurantDetailPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const [logoUrl, coverUrl] = await Promise.all([
+        resolveImageUrl({ url: form.logoUrl, file: logoFile }, { folder: 'restaurants/logos' }),
+        resolveImageUrl({ url: form.coverUrl, file: coverFile }, { folder: 'restaurants/covers' }),
+      ]);
       const updated = await updateRestaurant(restaurantId, {
         name: form.name,
         slug: slugify(form.slug),
         description: form.description,
+        logoUrl,
+        coverUrl,
         phone: form.phone,
         email: form.email,
         address: form.address,
@@ -179,6 +193,22 @@ export default function RestaurantDetailPage() {
             <label className="admin-field"><span>Name</span><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
             <label className="admin-field"><span>Slug</span><input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></label>
             <label className="admin-field span-2"><span>Description</span><textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+            <ImageUploadField
+              className="span-2"
+              label="Restaurant Logo"
+              url={form.logoUrl}
+              file={logoFile}
+              onUrlChange={(v) => setForm({ ...form, logoUrl: v })}
+              onFileChange={setLogoFile}
+            />
+            <ImageUploadField
+              className="span-2"
+              label="Cover Image"
+              url={form.coverUrl}
+              file={coverFile}
+              onUrlChange={(v) => setForm({ ...form, coverUrl: v })}
+              onFileChange={setCoverFile}
+            />
             <label className="admin-field"><span>Phone</span><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
             <label className="admin-field"><span>Email</span><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
             <label className="admin-field span-2"><span>Address</span><input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import ImageUploadField from '../components/ImageUploadField';
+import { resolveImageUrl } from '../services/mediaApi';
 import {
   createMenuItem,
   getCategories,
@@ -39,6 +41,7 @@ export default function DishFormPage({ mode = 'create' }) {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
 
   useEffect(() => {
     getCategories().then((cats) => {
@@ -73,6 +76,7 @@ export default function DishFormPage({ mode = 'create' }) {
           available: Boolean(dish.available),
           published: Boolean(dish.published),
         });
+        setImageFile(null);
       } catch (err) {
         push(err.message || 'Dish not found.', 'error');
         navigate('/restaurant/menu');
@@ -106,8 +110,13 @@ export default function DishFormPage({ mode = 'create' }) {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      const imageUrl = await resolveImageUrl(
+        { url: form.imageUrl, file: imageFile },
+        { folder: 'restaurants/dishes' }
+      );
       const payload = {
         ...form,
+        imageUrl,
         price: Number(form.price),
       };
       if (isEdit) {
@@ -161,9 +170,14 @@ export default function DishFormPage({ mode = 'create' }) {
               ))}
             </select>
           </Field>
-          <Field label="Dish Image URL">
-            <input value={form.imageUrl} onChange={(e) => setField('imageUrl', e.target.value)} placeholder="https://…" />
-          </Field>
+          <ImageUploadField
+            className="span-2"
+            label="Dish Image"
+            url={form.imageUrl}
+            file={imageFile}
+            onUrlChange={(v) => setField('imageUrl', v)}
+            onFileChange={setImageFile}
+          />
           <Field label="Description" className="span-2">
             <textarea rows={3} value={form.description} onChange={(e) => setField('description', e.target.value)} />
           </Field>

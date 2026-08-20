@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import ImageUploadField from '../components/ImageUploadField';
+import { resolveImageUrl } from '../services/mediaApi';
 import { createRestaurant, getSubscriptionPlans } from '../services/restaurantsApi';
 import { slugify } from '../services/adminStorage';
 import { useToast } from './components/Toast';
@@ -30,6 +32,8 @@ export default function AddRestaurantPage() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
 
   useEffect(() => {
     getSubscriptionPlans().then(setPlans).catch(() => setPlans([]));
@@ -76,7 +80,11 @@ export default function AddRestaurantPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      const created = await createRestaurant(form);
+      const [logoUrl, coverUrl] = await Promise.all([
+        resolveImageUrl({ url: form.logoUrl, file: logoFile }, { folder: 'restaurants/logos' }),
+        resolveImageUrl({ url: form.coverUrl, file: coverFile }, { folder: 'restaurants/covers' }),
+      ]);
+      const created = await createRestaurant({ ...form, logoUrl, coverUrl });
       push(`Restaurant “${created.name}” created successfully.`);
       navigate(`/admin/restaurants/${created.id}`);
     } catch (err) {
@@ -128,12 +136,22 @@ export default function AddRestaurantPage() {
                 onChange={(e) => setField('description', e.target.value)}
               />
             </Field>
-            <Field label="Restaurant Logo URL">
-              <input value={form.logoUrl} onChange={(e) => setField('logoUrl', e.target.value)} placeholder="https://…" />
-            </Field>
-            <Field label="Cover Image URL">
-              <input value={form.coverUrl} onChange={(e) => setField('coverUrl', e.target.value)} placeholder="https://…" />
-            </Field>
+            <ImageUploadField
+              className="span-2"
+              label="Restaurant Logo"
+              url={form.logoUrl}
+              file={logoFile}
+              onUrlChange={(v) => setField('logoUrl', v)}
+              onFileChange={setLogoFile}
+            />
+            <ImageUploadField
+              className="span-2"
+              label="Cover Image"
+              url={form.coverUrl}
+              file={coverFile}
+              onUrlChange={(v) => setField('coverUrl', v)}
+              onFileChange={setCoverFile}
+            />
             <Field label="Phone Number *" error={errors.phone}>
               <input value={form.phone} onChange={(e) => setField('phone', e.target.value)} />
             </Field>
