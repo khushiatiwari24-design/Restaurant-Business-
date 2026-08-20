@@ -115,6 +115,22 @@ function restaurantMenu(restaurantId) {
   return store[restaurantId];
 }
 
+/**
+ * Public read of published dishes for a restaurant (no auth).
+ * Backend: included in GET /api/v1/public/restaurants/:slug
+ */
+export function getPublishedMenuByRestaurantId(restaurantId) {
+  const menu = restaurantMenu(restaurantId);
+  const dishes = menu.dishes.filter((d) => d.published && d.available);
+  const categories = [
+    ...new Set([
+      ...menu.categories,
+      ...dishes.map((d) => d.category).filter(Boolean),
+    ]),
+  ];
+  return { categories, dishes };
+}
+
 async function withSession(permissionKey) {
   const session = await getRestaurantSession();
   if (permissionKey) requirePermission(session, permissionKey);

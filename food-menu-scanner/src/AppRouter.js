@@ -20,6 +20,7 @@ import RestaurantDashboard from './restaurant/RestaurantDashboard';
 import RestaurantMenuPage from './restaurant/RestaurantMenuPage';
 import DishFormPage from './restaurant/DishFormPage';
 import RestaurantPlaceholder from './restaurant/RestaurantPlaceholder';
+import PublicRestaurantPage from './pages/PublicRestaurantPage';
 
 export default function AppRouter() {
   return (
@@ -82,7 +83,7 @@ export default function AppRouter() {
                 />
               </Route>
 
-              {/* Restaurant Portal */}
+              {/* Restaurant Portal (static paths ranked above :restaurantSlug) */}
               <Route path="/restaurant-login" element={<RestaurantLogin />} />
               <Route
                 path="/restaurant"
@@ -182,6 +183,9 @@ export default function AppRouter() {
                   }
                 />
               </Route>
+
+              {/* Public restaurant discovery / menu */}
+              <Route path="/restaurant/:restaurantSlug" element={<PublicRestaurantPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

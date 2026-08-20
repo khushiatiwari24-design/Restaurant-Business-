@@ -15,5 +15,6 @@ test('renders the restaurant hero heading', () => {
     name: /craving something extraordinary/i,
   });
   expect(heading).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^restaurants$/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /restaurant login/i })).toBeInTheDocument();
 });
