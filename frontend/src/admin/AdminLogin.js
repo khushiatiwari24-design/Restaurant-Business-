@@ -21,9 +21,24 @@ export default function AdminLogin() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Please enter your admin email.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your admin password.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await login({ email, password });
+      await login({ email: trimmedEmail, password });
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed.');
@@ -69,7 +84,7 @@ export default function AdminLogin() {
           {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
 
           <button type="submit" className="admin-btn admin-btn-primary admin-btn-block" disabled={loading}>
-            {loading ? 'Signing in…' : 'Login'}
+            {loading ? 'Signing in…' : 'Next'}
           </button>
         </form>
 

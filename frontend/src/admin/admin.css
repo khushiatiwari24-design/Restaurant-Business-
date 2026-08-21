@@ -58,6 +58,24 @@
   font-size: 12px;
 }
 
+.admin-login-card .admin-btn-primary {
+  background: #d97706;
+  color: #fff7ed;
+  border-color: #b45309;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.admin-login-card .admin-btn-primary:hover:not(:disabled) {
+  background: #b45309;
+  box-shadow: 0 8px 18px rgba(180, 83, 9, 0.28);
+}
+
+.admin-login-card .admin-btn-primary:active:not(:disabled) {
+  background: #92400e;
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
 .admin-pill {
   display: inline-flex;
   align-items: center;
