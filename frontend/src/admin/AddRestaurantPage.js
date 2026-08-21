@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ImageUploadField from '../components/ImageUploadField';
 import { resolveImageUrl } from '../services/mediaApi';
+import { validatePasswordStrength } from '../services/passwordHash';
 import { createRestaurant, getSubscriptionPlans } from '../services/restaurantsApi';
 import { slugify } from '../services/adminStorage';
 import { useToast } from './components/Toast';
@@ -21,6 +22,8 @@ const INITIAL = {
   adminName: '',
   adminEmail: '',
   adminPhone: '',
+  adminPassword: '',
+  confirmPassword: '',
   subscriptionPlanId: 'free',
 };
 
@@ -71,6 +74,13 @@ export default function AddRestaurantPage() {
     if (form.adminEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail)) {
       next.adminEmail = 'Enter a valid admin email';
     }
+    const passwordError = validatePasswordStrength(form.adminPassword);
+    if (passwordError) next.adminPassword = passwordError;
+    if (!form.confirmPassword) {
+      next.confirmPassword = 'Confirm password is required';
+    } else if (form.adminPassword !== form.confirmPassword) {
+      next.confirmPassword = 'Passwords do not match.';
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -84,7 +94,30 @@ export default function AddRestaurantPage() {
         resolveImageUrl({ url: form.logoUrl, file: logoFile }, { folder: 'restaurants/logos' }),
         resolveImageUrl({ url: form.coverUrl, file: coverFile }, { folder: 'restaurants/covers' }),
       ]);
-      const created = await createRestaurant({ ...form, logoUrl, coverUrl });
+      const created = await createRestaurant({
+        restaurant: {
+          name: form.name,
+          slug: form.slug,
+          description: form.description,
+          logoUrl,
+          coverUrl,
+          phone: form.phone,
+          email: form.email,
+          address: form.address,
+          city: form.city,
+          state: form.state,
+          pincode: form.pincode,
+        },
+        owner: {
+          name: form.adminName,
+          email: form.adminEmail,
+          phone: form.adminPhone,
+          password: form.adminPassword,
+        },
+        subscription: {
+          plan: form.subscriptionPlanId,
+        },
+      });
       push(`Restaurant “${created.name}” created successfully.`);
       navigate(`/admin/restaurants/${created.id}`);
     } catch (err) {
@@ -175,7 +208,9 @@ export default function AddRestaurantPage() {
 
         <section className="admin-form-section">
           <h2>Restaurant Admin</h2>
-          <p className="admin-muted">Creates the initial restaurant administrator (cannot create other restaurants).</p>
+          <p className="admin-muted">
+            Creates the initial <strong>RESTAURANT_OWNER</strong> account for restaurant login (cannot create other restaurants).
+          </p>
           <div className="admin-form-grid">
             <Field label="Admin Name *" error={errors.adminName}>
               <input value={form.adminName} onChange={(e) => setField('adminName', e.target.value)} />
@@ -186,6 +221,21 @@ export default function AddRestaurantPage() {
             <Field label="Admin Phone">
               <input value={form.adminPhone} onChange={(e) => setField('adminPhone', e.target.value)} />
             </Field>
+            <PasswordField
+              label="Admin Password *"
+              error={errors.adminPassword}
+              value={form.adminPassword}
+              onChange={(v) => setField('adminPassword', v)}
+              autoComplete="new-password"
+            />
+            <PasswordField
+              label="Confirm Password *"
+              error={errors.confirmPassword}
+              value={form.confirmPassword}
+              onChange={(v) => setField('confirmPassword', v)}
+              className="span-2"
+              autoComplete="new-password"
+            />
           </div>
         </section>
 
@@ -238,6 +288,32 @@ function Field({ label, error, children, className = '' }) {
     <label className={`admin-field ${className}`}>
       <span>{label}</span>
       {children}
+      {error ? <em className="admin-field-error">{error}</em> : null}
+    </label>
+  );
+}
+
+function PasswordField({ label, error, value, onChange, className = '', autoComplete = 'new-password' }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <label className={`admin-field ${className}`}>
+      <span>{label}</span>
+      <div className="admin-password-wrap">
+        <input
+          type={visible ? 'text' : 'password'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoComplete={autoComplete}
+        />
+        <button
+          type="button"
+          className="admin-password-toggle"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? 'Hide password' : 'Show password'}
+        >
+          {visible ? 'Hide' : 'Show'}
+        </button>
+      </div>
       {error ? <em className="admin-field-error">{error}</em> : null}
     </label>
   );

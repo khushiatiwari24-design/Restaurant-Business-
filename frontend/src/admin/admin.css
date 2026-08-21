@@ -421,6 +421,35 @@
   width: 100%;
 }
 
+.admin-password-wrap {
+  position: relative;
+  display: grid;
+}
+
+.admin-password-wrap input {
+  padding-right: 72px;
+}
+
+.admin-password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #92400e;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.admin-password-toggle:hover {
+  background: rgba(217, 119, 6, 0.12);
+}
+
 .admin-icon-btn {
   border: 1px solid var(--admin-border);
   background: transparent;

@@ -1,5 +1,11 @@
 import { getAdminSession, requireSuperAdmin, ROLES } from './adminAuth';
 import { delay, readJson, slugify, uid, writeJson } from './adminStorage';
+import { hashPassword, validatePasswordStrength } from './passwordHash';
+import { RESTAURANT_ROLES } from './restaurantAuthShared';
+import {
+  findRestaurantUserByEmail,
+  registerRestaurantUser,
+} from './restaurantUsers';
 
 const RESTAURANTS_KEY = 'restaurants';
 
@@ -167,24 +173,34 @@ export async function getRestaurants({ search = '', status = 'all' } = {}) {
 }
 
 /**
- * Create restaurant + restaurant admin + defaults.
- * Backend flow: create restaurant → user → assign → branch → categories → subscription → audit.
+ * Create restaurant + RESTAURANT_OWNER + defaults.
+ * Backend: hash password (bcrypt) → restaurant → owner user → membership → subscription.
+ * Payload may be flat (form) or nested { restaurant, owner, subscription }.
  */
 export async function createRestaurant(payload) {
   await withSuperAdmin();
   await delay(500);
 
-  const name = String(payload.name || '').trim();
-  const slug = slugify(payload.slug || name);
-  const phone = String(payload.phone || '').trim();
-  const email = String(payload.email || '').trim().toLowerCase();
-  const address = String(payload.address || '').trim();
-  const city = String(payload.city || '').trim();
-  const adminName = String(payload.adminName || '').trim();
-  const adminEmail = String(payload.adminEmail || '').trim().toLowerCase();
+  const flat = normalizeCreatePayload(payload);
+  const name = String(flat.name || '').trim();
+  const slug = slugify(flat.slug || name);
+  const phone = String(flat.phone || '').trim();
+  const email = String(flat.email || '').trim().toLowerCase();
+  const address = String(flat.address || '').trim();
+  const city = String(flat.city || '').trim();
+  const adminName = String(flat.adminName || '').trim();
+  const adminEmail = String(flat.adminEmail || '').trim().toLowerCase();
+  const adminPassword = String(flat.adminPassword || '');
 
   if (!name || !slug || !phone || !email || !address || !city || !adminName || !adminEmail) {
     const err = new Error('Please fill all required fields.');
+    err.code = 'VALIDATION';
+    throw err;
+  }
+
+  const passwordError = validatePasswordStrength(adminPassword);
+  if (passwordError) {
+    const err = new Error(passwordError);
     err.code = 'VALIDATION';
     throw err;
   }
@@ -195,35 +211,37 @@ export async function createRestaurant(payload) {
     err.code = 'CONFLICT';
     throw err;
   }
-  if (list.some((r) => r.admin?.email === adminEmail)) {
+  if (list.some((r) => r.admin?.email === adminEmail) || findRestaurantUserByEmail(adminEmail)) {
     const err = new Error('A restaurant admin with this email already exists.');
     err.code = 'CONFLICT';
     throw err;
   }
 
+  const passwordHash = await hashPassword(adminPassword);
+  const ownerId = uid('user');
   const now = new Date().toISOString();
   const restaurant = {
     id: uid('rest'),
     name,
     slug,
-    description: String(payload.description || '').trim(),
-    logoUrl: String(payload.logoUrl || '').trim(),
-    coverUrl: String(payload.coverUrl || '').trim(),
+    description: String(flat.description || '').trim(),
+    logoUrl: String(flat.logoUrl || '').trim(),
+    coverUrl: String(flat.coverUrl || '').trim(),
     phone,
     email,
     address,
     city,
-    state: String(payload.state || '').trim(),
-    pincode: String(payload.pincode || '').trim(),
+    state: String(flat.state || '').trim(),
+    pincode: String(flat.pincode || '').trim(),
     status: 'active',
-    subscriptionPlanId: payload.subscriptionPlanId || 'free',
+    subscriptionPlanId: flat.subscriptionPlanId || 'free',
     admin: {
-      id: uid('user'),
+      id: ownerId,
       name: adminName,
       email: adminEmail,
-      phone: String(payload.adminPhone || '').trim(),
+      phone: String(flat.adminPhone || '').trim(),
       status: 'active',
-      role: ROLES.RESTAURANT_ADMIN,
+      role: RESTAURANT_ROLES.OWNER,
     },
     // Defaults created by backend pipeline
     defaultBranch: {
@@ -256,10 +274,52 @@ export async function createRestaurant(payload) {
   list.push(restaurant);
   saveAll(list);
 
+  registerRestaurantUser({
+    id: ownerId,
+    name: adminName,
+    email: adminEmail,
+    phone: String(flat.adminPhone || '').trim(),
+    role: RESTAURANT_ROLES.OWNER,
+    restaurantId: restaurant.id,
+    restaurantSlug: restaurant.slug,
+    restaurantName: restaurant.name,
+    passwordHash,
+    status: 'active',
+    createdAt: now,
+  });
+
+  // Never return password or passwordHash
   return {
     ...restaurant,
     subscriptionPlan: planById(restaurant.subscriptionPlanId),
   };
+}
+
+function normalizeCreatePayload(payload = {}) {
+  if (payload.restaurant || payload.owner) {
+    const r = payload.restaurant || {};
+    const o = payload.owner || {};
+    const s = payload.subscription || {};
+    return {
+      name: r.name,
+      slug: r.slug,
+      description: r.description,
+      logoUrl: r.logoUrl,
+      coverUrl: r.coverUrl,
+      phone: r.phone,
+      email: r.email,
+      address: r.address,
+      city: r.city,
+      state: r.state,
+      pincode: r.pincode,
+      adminName: o.name,
+      adminEmail: o.email,
+      adminPhone: o.phone,
+      adminPassword: o.password,
+      subscriptionPlanId: String(s.plan || s.planId || 'free').toLowerCase(),
+    };
+  }
+  return payload;
 }
 
 export async function getRestaurant(restaurantId) {

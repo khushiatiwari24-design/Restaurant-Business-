@@ -1,10 +1,8 @@
 import { delay, readJson, removeKey, writeJson } from './adminStorage';
+import { RESTAURANT_ROLES } from './restaurantAuthShared';
+import { authenticateRestaurantUser } from './restaurantUsers';
 
-export const RESTAURANT_ROLES = {
-  OWNER: 'RESTAURANT_OWNER',
-  MANAGER: 'RESTAURANT_MANAGER',
-  STAFF: 'RESTAURANT_STAFF',
-};
+export { RESTAURANT_ROLES };
 
 /** Demo restaurant users — swap for NestJS JWT + membership later. */
 const DEMO_USERS = [
@@ -74,29 +72,8 @@ export function getPermissions(role) {
   };
 }
 
-/**
- * Restaurant portal login.
- * Backend: POST /auth/restaurant/login → JWT + user + restaurant membership.
- */
-export async function restaurantLogin({ email, password }) {
-  await delay();
-  const normalized = String(email || '').trim().toLowerCase();
-  if (!normalized || !password) {
-    const err = new Error('Email and password are required.');
-    err.code = 'VALIDATION';
-    throw err;
-  }
-
-  const user = DEMO_USERS.find(
-    (u) => u.email === normalized && u.password === password
-  );
-  if (!user) {
-    const err = new Error('Invalid email or password.');
-    err.code = 'UNAUTHORIZED';
-    throw err;
-  }
-
-  const session = {
+function buildSession(user) {
+  return {
     token: `rest_jwt_${Date.now()}`,
     user: {
       id: user.id,
@@ -110,6 +87,41 @@ export async function restaurantLogin({ email, password }) {
     permissions: getPermissions(user.role),
     expiresAt: Date.now() + 1000 * 60 * 60 * 12,
   };
+}
+
+/**
+ * Restaurant portal login.
+ * Backend: POST /auth/restaurant/login → JWT + user + restaurant membership.
+ */
+export async function restaurantLogin({ email, password }) {
+  await delay();
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized || !password) {
+    const err = new Error('Email and password are required.');
+    err.code = 'VALIDATION';
+    throw err;
+  }
+
+  const demo = DEMO_USERS.find(
+    (u) => u.email === normalized && u.password === password
+  );
+  if (demo) {
+    const session = buildSession(demo);
+    writeJson(SESSION_KEY, session);
+    return session;
+  }
+
+  const registered = await authenticateRestaurantUser({
+    email: normalized,
+    password,
+  });
+  if (!registered) {
+    const err = new Error('Invalid email or password.');
+    err.code = 'UNAUTHORIZED';
+    throw err;
+  }
+
+  const session = buildSession(registered);
   writeJson(SESSION_KEY, session);
   return session;
 }
