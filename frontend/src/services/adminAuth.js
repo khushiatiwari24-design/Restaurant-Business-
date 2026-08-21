@@ -1,49 +1,82 @@
-import { delay, readJson, removeKey, writeJson } from './adminStorage';
+/**
+ * Admin auth against NestJS API.
+ * POST /api/v1/auth/admin/login
+ * GET  /api/v1/auth/me
+ * POST /api/v1/auth/logout
+ */
+import { readJson, removeKey, writeJson } from './adminStorage';
 
 export const ROLES = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   RESTAURANT_ADMIN: 'RESTAURANT_ADMIN',
 };
 
-/** Demo Super Admin — replace with NestJS JWT auth later. */
-const DEMO_SUPER_ADMIN = {
-  id: 'user_super_admin',
-  email: 'admin@dilyum.com',
-  password: 'SuperAdmin@123',
-  name: 'Platform Super Admin',
-  role: ROLES.SUPER_ADMIN,
-};
-
 const SESSION_KEY = 'session';
+const API_BASE =
+  process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1';
+
+async function api(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  let data = null;
+  const text = await res.text();
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
+
+  if (!res.ok) {
+    const message =
+      (Array.isArray(data?.message) ? data.message.join(', ') : data?.message) ||
+      'Request failed.';
+    const err = new Error(message);
+    err.code =
+      res.status === 401
+        ? 'UNAUTHORIZED'
+        : res.status === 403
+          ? 'FORBIDDEN'
+          : res.status === 400
+            ? 'VALIDATION'
+            : 'ERROR';
+    err.status = res.status;
+    throw err;
+  }
+
+  return data;
+}
 
 /**
- * Authenticate Super Admin.
- * Backend swap: POST /auth/admin/login → JWT + user.
+ * Authenticate Super Admin via backend.
  */
 export async function adminLogin({ email, password }) {
-  await delay();
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized || !password) {
     const err = new Error('Email and password are required.');
     err.code = 'VALIDATION';
     throw err;
   }
-  if (
-    normalized !== DEMO_SUPER_ADMIN.email ||
-    password !== DEMO_SUPER_ADMIN.password
-  ) {
-    const err = new Error('Invalid admin email or password.');
-    err.code = 'UNAUTHORIZED';
-    throw err;
-  }
+
+  const data = await api('/auth/admin/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: normalized, password }),
+  });
 
   const session = {
-    token: `mock_jwt_${Date.now()}`,
+    token: data.accessToken,
     user: {
-      id: DEMO_SUPER_ADMIN.id,
-      email: DEMO_SUPER_ADMIN.email,
-      name: DEMO_SUPER_ADMIN.name,
-      role: DEMO_SUPER_ADMIN.role,
+      id: data.user.id,
+      email: data.user.email,
+      name: data.user.name,
+      role: data.user.role,
     },
     expiresAt: Date.now() + 1000 * 60 * 60 * 12,
   };
@@ -52,14 +85,34 @@ export async function adminLogin({ email, password }) {
 }
 
 export async function getAdminSession() {
-  await delay(80);
-  const session = readJson(SESSION_KEY, null);
-  if (!session?.token || !session?.user) return null;
-  if (session.expiresAt && Date.now() > session.expiresAt) {
-    removeKey(SESSION_KEY);
-    return null;
+  const local = getAdminSessionSync();
+  if (!local?.token) return null;
+
+  try {
+    const me = await api('/auth/me', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${local.token}` },
+    });
+    const session = {
+      token: local.token,
+      user: {
+        id: me.id,
+        email: me.email,
+        name: me.name,
+        role: me.role,
+      },
+      expiresAt: local.expiresAt || Date.now() + 1000 * 60 * 60 * 12,
+    };
+    writeJson(SESSION_KEY, session);
+    return session;
+  } catch (err) {
+    if (err.code === 'UNAUTHORIZED' || err.code === 'FORBIDDEN') {
+      removeKey(SESSION_KEY);
+      return null;
+    }
+    // Backend unreachable: keep local session for offline mock restaurant APIs
+    return local;
   }
-  return session;
 }
 
 export function getAdminSessionSync() {
@@ -73,7 +126,17 @@ export function getAdminSessionSync() {
 }
 
 export async function adminLogout() {
-  await delay(120);
+  const local = getAdminSessionSync();
+  try {
+    if (local?.token) {
+      await api('/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${local.token}` },
+      });
+    }
+  } catch {
+    // Ignore network/API errors; always clear local session
+  }
   removeKey(SESSION_KEY);
 }
 
@@ -84,8 +147,3 @@ export function requireSuperAdmin(session) {
     throw err;
   }
 }
-
-export const DEMO_ADMIN_CREDENTIALS = {
-  email: DEMO_SUPER_ADMIN.email,
-  password: DEMO_SUPER_ADMIN.password,
-};

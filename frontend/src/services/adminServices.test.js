@@ -20,6 +20,13 @@ if (!globalThis.crypto) {
 
 const store = new Map();
 
+const mockAdmin = {
+  id: 'user_super_admin',
+  email: 'vvinit594@gmail.com',
+  name: 'Platform Super Admin',
+  role: ROLES.SUPER_ADMIN,
+};
+
 beforeAll(() => {
   global.localStorage = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
@@ -30,14 +37,44 @@ beforeAll(() => {
 
 beforeEach(() => {
   store.clear();
+  global.fetch = jest.fn(async (url, options = {}) => {
+    const path = String(url);
+    const json = (status, body) => ({
+      ok: status >= 200 && status < 300,
+      status,
+      text: async () => JSON.stringify(body),
+    });
+
+    if (path.includes('/auth/admin/login') && options.method === 'POST') {
+      const body = JSON.parse(options.body || '{}');
+      if (body.email === mockAdmin.email && body.password === 'Admin@123') {
+        return json(200, { accessToken: 'test_jwt', user: mockAdmin });
+      }
+      return json(401, { message: 'Invalid email or password.' });
+    }
+
+    if (path.includes('/auth/me')) {
+      const auth = options.headers?.Authorization || '';
+      if (String(auth).includes('test_jwt')) {
+        return json(200, mockAdmin);
+      }
+      return json(401, { message: 'Authentication required.' });
+    }
+
+    if (path.includes('/auth/logout')) {
+      return json(200, { success: true });
+    }
+
+    return json(404, { message: 'Not found' });
+  });
 });
 
 test('super admin can manage restaurants; unauthenticated cannot', async () => {
   await expect(getRestaurants()).rejects.toMatchObject({ code: 'FORBIDDEN' });
 
   const session = await adminLogin({
-    email: 'admin@dilyum.com',
-    password: 'SuperAdmin@123',
+    email: 'vvinit594@gmail.com',
+    password: 'Admin@123',
   });
   expect(session.user.role).toBe(ROLES.SUPER_ADMIN);
   expect(await getAdminSession()).toBeTruthy();
@@ -89,8 +126,8 @@ test('super admin can manage restaurants; unauthenticated cannot', async () => {
 
 test('created restaurant owner can restaurant-login with hashed password only', async () => {
   await adminLogin({
-    email: 'admin@dilyum.com',
-    password: 'SuperAdmin@123',
+    email: 'vvinit594@gmail.com',
+    password: 'Admin@123',
   });
 
   const created = await createRestaurant({

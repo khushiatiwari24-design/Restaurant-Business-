@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { DEMO_ADMIN_CREDENTIALS } from '../services/adminAuth';
 import { useAdminAuth } from './auth/AdminAuthContext';
 
 export default function AdminLogin() {
@@ -64,7 +63,7 @@ export default function AdminLogin() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@dilyum.com"
+              placeholder="admin@example.com"
               required
             />
           </label>
@@ -87,10 +86,6 @@ export default function AdminLogin() {
             {loading ? 'Signing in…' : 'Next'}
           </button>
         </form>
-
-        <p className="admin-login-hint">
-          Demo: <code>{DEMO_ADMIN_CREDENTIALS.email}</code> / <code>{DEMO_ADMIN_CREDENTIALS.password}</code>
-        </p>
       </div>
     </div>
   );
