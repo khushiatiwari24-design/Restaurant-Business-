@@ -1,36 +1,43 @@
 # DilYum Backend (NestJS)
 
-Phase 1: PostgreSQL + Prisma + Super Admin JWT authentication.
+Phase 1–2: Super Admin auth + real Restaurant creation.
 
 ## Quick start
 
 ```bash
-# 1) Start Postgres (Docker maps host port 5433 → container 5432)
-npm run db:up
-
-# 2) Install deps (if needed)
+# Point DATABASE_URL at your Postgres DB (e.g. Restaurant_DB on :5432)
 npm install
-
-# 3) Migrate + seed Super Admin
-npx prisma migrate dev --name init
+npx prisma migrate dev
 npm run prisma:seed
-
-# 4) Run API (http://localhost:3001/api/v1)
 npm run start:dev
 ```
 
-> Note: Postgres is exposed on **5433** by default so it does not conflict with a local Postgres install on 5432.
-## Auth endpoints
+API: `http://localhost:3001/api/v1`
+
+## Auth
 
 - `POST /api/v1/auth/admin/login`
-- `GET  /api/v1/auth/me` (Bearer JWT)
-- `POST /api/v1/auth/logout` (Bearer JWT)
+- `POST /api/v1/auth/restaurant/login`
+- `GET  /api/v1/auth/me`
+- `POST /api/v1/auth/logout`
 
-## Super Admin seed
+## Admin restaurants (SUPER_ADMIN JWT)
 
-Configured via `.env`:
+- `GET    /api/v1/admin/restaurants`
+- `GET    /api/v1/admin/restaurants/plans`
+- `POST   /api/v1/admin/restaurants`
+- `GET    /api/v1/admin/restaurants/:id`
+- `PATCH  /api/v1/admin/restaurants/:id/suspend`
+- `PATCH  /api/v1/admin/restaurants/:id/activate`
 
-- `SUPER_ADMIN_EMAIL`
-- `SUPER_ADMIN_PASSWORD`
+## Public
 
-Password is bcrypt-hashed before insert. Never stored as plaintext.
+- `GET /api/v1/public/restaurants`
+- `GET /api/v1/public/restaurants/:slug`
+
+## Seed only
+
+- Super Admin (from `.env`)
+- Subscription plans: FREE / STARTER / PROFESSIONAL / ENTERPRISE
+
+No demo restaurants are seeded.

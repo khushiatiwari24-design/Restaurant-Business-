@@ -2,8 +2,15 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { UserRole } from '@prisma/client';
+import { RestaurantStatus, UserRole } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { SafeUser, UsersService } from '../users/users.service';
+
+const RESTAURANT_ROLES = new Set<UserRole>([
+  UserRole.RESTAURANT_OWNER,
+  UserRole.RESTAURANT_MANAGER,
+  UserRole.RESTAURANT_STAFF,
+]);
 
 @Injectable()
 export class AuthService {
@@ -11,6 +18,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async adminLogin(email: string, password: string) {
@@ -42,27 +50,114 @@ export class AuthService {
     };
   }
 
-  async getMe(user: SafeUser) {
+  async restaurantLogin(email: string, password: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || !user.isActive || !RESTAURANT_ROLES.has(user.role)) {
+      throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    const passwordOk = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordOk) {
+      throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    const membership = await this.prisma.restaurantMembership.findFirst({
+      where: {
+        userId: user.id,
+        isActive: true,
+      },
+      include: {
+        restaurant: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!membership || membership.restaurant.deletedAt) {
+      throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    if (membership.restaurant.status !== RestaurantStatus.ACTIVE) {
+      throw new UnauthorizedException(
+        'This restaurant is not active. Contact DilYum support.',
+      );
+    }
+
+    const safeUser = this.usersService.toSafeUser(user);
+    const accessToken = await this.signToken(safeUser, {
+      restaurantId: membership.restaurantId,
+      membershipRole: membership.role,
+    });
+
     return {
+      accessToken,
+      user: {
+        id: safeUser.id,
+        name: safeUser.name,
+        email: safeUser.email,
+        role: safeUser.role,
+      },
+      restaurant: {
+        id: membership.restaurant.id,
+        name: membership.restaurant.name,
+        slug: membership.restaurant.slug,
+      },
+    };
+  }
+
+  async getMe(user: SafeUser & { restaurantId?: string }) {
+    const base = {
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
     };
+
+    if (!RESTAURANT_ROLES.has(user.role)) {
+      return base;
+    }
+
+    const membership = await this.prisma.restaurantMembership.findFirst({
+      where: {
+        userId: user.id,
+        isActive: true,
+        ...(user.restaurantId ? { restaurantId: user.restaurantId } : {}),
+      },
+      include: { restaurant: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!membership) {
+      return base;
+    }
+
+    return {
+      ...base,
+      restaurant: {
+        id: membership.restaurant.id,
+        name: membership.restaurant.name,
+        slug: membership.restaurant.slug,
+      },
+    };
   }
 
   logout() {
-    // Stateless JWT: client discards the token. Refresh-token revocation can be added later.
     return { success: true };
   }
 
-  private async signToken(user: SafeUser) {
+  private async signToken(
+    user: SafeUser,
+    extras: { restaurantId?: string; membershipRole?: string } = {},
+  ) {
     const expiresIn = this.config.get<string>('JWT_EXPIRES_IN') || '12h';
     return this.jwtService.signAsync(
       {
         sub: user.id,
         email: user.email,
         role: user.role,
+        ...(extras.restaurantId ? { restaurantId: extras.restaurantId } : {}),
+        ...(extras.membershipRole
+          ? { membershipRole: extras.membershipRole }
+          : {}),
       },
       {
         expiresIn: expiresIn as `${number}h` | `${number}d` | number,

@@ -609,17 +609,6 @@ function HeroSection({ onExploreMenu }) {
   );
 }
 
-function Header() {
-  return (
-    <header className="header">
-      <div className="header-content">
-        <h1>🍽️ Gateway Restaurant</h1>
-        <p className="subtitle">Discover authentic Indian cuisine • Fresh ingredients • Best taste</p>
-      </div>
-    </header>
-  );
-}
-
 function SearchAndFilter({ id, searchText, setSearchText, selectedPriceRange, setSelectedPriceRange, priceRangeOptions }) {
   return (
     <div className="search-filter-section" id={id}>

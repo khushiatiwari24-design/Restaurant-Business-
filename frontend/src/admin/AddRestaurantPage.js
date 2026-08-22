@@ -94,10 +94,17 @@ export default function AddRestaurantPage() {
         resolveImageUrl({ url: form.logoUrl, file: logoFile }, { folder: 'restaurants/logos' }),
         resolveImageUrl({ url: form.coverUrl, file: coverFile }, { folder: 'restaurants/covers' }),
       ]);
+
+      // Keep payloads under Nest body limit; prefer URL until cloud upload exists
+      const maxImageChars = 12 * 1024 * 1024;
+      if ((logoUrl && logoUrl.length > maxImageChars) || (coverUrl && coverUrl.length > maxImageChars)) {
+        throw new Error('Image is too large. Use a smaller image (under ~8 MB) or paste an image URL.');
+      }
+
       const created = await createRestaurant({
         restaurant: {
           name: form.name,
-          slug: form.slug,
+          slug: slugify(form.slug || form.name),
           description: form.description,
           logoUrl,
           coverUrl,
@@ -121,7 +128,13 @@ export default function AddRestaurantPage() {
       push(`Restaurant “${created.name}” created successfully.`);
       navigate(`/admin/restaurants/${created.id}`);
     } catch (err) {
-      push(err.message || 'Could not create restaurant.', 'error');
+      const detail = err.message || 'Could not create restaurant.';
+      push(
+        detail.toLowerCase().includes('must be') || err.code === 'VALIDATION'
+          ? `Unable to create restaurant. ${detail}`
+          : detail,
+        'error'
+      );
     } finally {
       setSubmitting(false);
     }

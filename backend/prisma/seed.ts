@@ -6,7 +6,55 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 
-async function main() {
+const PLANS = [
+  {
+    code: 'FREE',
+    name: 'Free',
+    priceLabel: '₹0/mo',
+    sortOrder: 1,
+    features: ['1 branch', '50 dishes', '5 QR tables'],
+  },
+  {
+    code: 'STARTER',
+    name: 'Starter',
+    priceLabel: '₹999/mo',
+    sortOrder: 2,
+    features: ['2 branches', '200 dishes', '25 QR tables'],
+  },
+  {
+    code: 'PROFESSIONAL',
+    name: 'Professional',
+    priceLabel: '₹2,499/mo',
+    sortOrder: 3,
+    features: ['5 branches', 'Unlimited dishes', '100 QR tables', 'Analytics'],
+  },
+  {
+    code: 'ENTERPRISE',
+    name: 'Enterprise',
+    priceLabel: 'Custom',
+    sortOrder: 4,
+    features: ['Unlimited branches', 'SLA', 'Custom QR domains', 'Priority support'],
+  },
+];
+
+async function seedPlans() {
+  for (const plan of PLANS) {
+    await prisma.subscriptionPlan.upsert({
+      where: { code: plan.code },
+      create: plan,
+      update: {
+        name: plan.name,
+        priceLabel: plan.priceLabel,
+        features: plan.features,
+        sortOrder: plan.sortOrder,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`Subscription plans upserted: ${PLANS.map((p) => p.code).join(', ')}`);
+}
+
+async function seedSuperAdmin() {
   const email = String(process.env.SUPER_ADMIN_EMAIL || '')
     .trim()
     .toLowerCase();
@@ -47,6 +95,11 @@ async function main() {
   });
 
   console.log(`Super Admin created: ${email}`);
+}
+
+async function main() {
+  await seedPlans();
+  await seedSuperAdmin();
 }
 
 main()

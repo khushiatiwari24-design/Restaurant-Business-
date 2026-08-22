@@ -1,35 +1,20 @@
-import { getAdminSession, requireSuperAdmin } from './adminAuth';
-import { delay } from './adminStorage';
-import { ensureRestaurantsSeeded } from './restaurantsApi';
+import { getRestaurants } from './restaurantsApi';
 
 /**
- * Platform dashboard stats for Super Admin.
- * Backend: GET /admin/dashboard/stats
+ * Dashboard stats from live restaurants list.
+ * Backend: later GET /api/v1/admin/stats
  */
 export async function getAdminDashboardStats() {
-  const session = await getAdminSession();
-  requireSuperAdmin(session);
-  await delay();
-
-  const restaurants = ensureRestaurantsSeeded();
-  const totalRestaurants = restaurants.length;
-  const activeRestaurants = restaurants.filter((r) => r.status === 'active').length;
-  const suspendedRestaurants = restaurants.filter((r) => r.status === 'suspended').length;
-  const totalMenuItems = restaurants.reduce(
-    (sum, r) => sum + (r.stats?.dishes || 0),
-    0
-  );
-  const totalQrCodes = restaurants.reduce(
-    (sum, r) =>
-      sum + (r.stats?.activeQrCodes || 0) + (r.stats?.revokedQrCodes || 0),
-    0
-  );
+  const restaurants = await getRestaurants({ status: 'all' });
+  const total = restaurants.length;
+  const active = restaurants.filter((r) => r.status === 'active').length;
+  const suspended = restaurants.filter((r) => r.status === 'suspended').length;
 
   return {
-    totalRestaurants,
-    activeRestaurants,
-    suspendedRestaurants,
-    totalMenuItems,
-    totalQrCodes,
+    totalRestaurants: total,
+    activeRestaurants: active,
+    suspendedRestaurants: suspended,
+    totalDishes: restaurants.reduce((n, r) => n + (r.stats?.dishes || 0), 0),
+    totalTables: restaurants.reduce((n, r) => n + (r.stats?.tables || 0), 0),
   };
 }

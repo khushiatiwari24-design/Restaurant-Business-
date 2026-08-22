@@ -8,6 +8,8 @@ export type JwtPayload = {
   sub: string;
   email: string;
   role: string;
+  restaurantId?: string;
+  membershipRole?: string;
 };
 
 @Injectable()
@@ -28,6 +30,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Authentication required.');
     }
-    return this.usersService.toSafeUser(user);
+    return {
+      ...this.usersService.toSafeUser(user),
+      restaurantId: payload.restaurantId,
+      membershipRole: payload.membershipRole,
+    };
   }
 }

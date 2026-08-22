@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { DEMO_RESTAURANT_CREDENTIALS } from '../services/restaurantAuth';
 import { useRestaurantAuth } from './auth/RestaurantAuthContext';
 
 export default function RestaurantLogin() {
@@ -66,7 +65,7 @@ export default function RestaurantLogin() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="owner@gateway.example"
+              placeholder="owner@example.com"
               required
             />
           </label>
@@ -100,16 +99,6 @@ export default function RestaurantLogin() {
         >
           Forgot Password?
         </button>
-
-        <p className="admin-login-hint">
-          Demo users (Gateway Restaurant):
-          {DEMO_RESTAURANT_CREDENTIALS.map((c) => (
-            <span key={c.email}>
-              <br />
-              <code>{c.email}</code> / <code>{c.password}</code>
-            </span>
-          ))}
-        </p>
 
         <p className="admin-login-hint">
           <Link to="/">← Back to DilYum</Link>

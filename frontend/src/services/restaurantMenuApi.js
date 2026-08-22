@@ -23,83 +23,8 @@ function emptyMenu() {
   };
 }
 
-function seedGatewayIfNeeded(store) {
-  if (store.rest_gateway) return store;
-  store.rest_gateway = {
-    categories: [...DEFAULT_CATEGORIES],
-    dishes: [
-      {
-        id: 'dish_masala_dosa',
-        name: 'Masala Dosa',
-        description: 'Crispy dosa with spiced potato filling.',
-        price: 80,
-        category: 'South Indian',
-        imageUrl: '',
-        calories: 320,
-        protein: 8,
-        carbohydrates: 48,
-        fat: 10,
-        ingredients: ['rice batter', 'potato', 'onion', 'spices'],
-        allergens: ['gluten'],
-        isVeg: true,
-        isVegan: false,
-        isJain: false,
-        available: true,
-        published: true,
-        createdAt: '2026-06-12T10:00:00.000Z',
-        updatedAt: '2026-06-12T10:00:00.000Z',
-      },
-      {
-        id: 'dish_paneer_tikka',
-        name: 'Paneer Tikka',
-        description: 'Tandoor-grilled paneer with spices.',
-        price: 180,
-        category: 'Starters',
-        imageUrl: '',
-        calories: 280,
-        protein: 16,
-        carbohydrates: 12,
-        fat: 18,
-        ingredients: ['paneer', 'yogurt', 'spices'],
-        allergens: ['dairy'],
-        isVeg: true,
-        isVegan: false,
-        isJain: false,
-        available: true,
-        published: true,
-        createdAt: '2026-06-12T10:00:00.000Z',
-        updatedAt: '2026-06-12T10:00:00.000Z',
-      },
-      {
-        id: 'dish_veg_biryani',
-        name: 'Veg Biryani',
-        description: 'Fragrant basmati rice with mixed vegetables.',
-        price: 160,
-        category: 'Rice',
-        imageUrl: '',
-        calories: 420,
-        protein: 10,
-        carbohydrates: 62,
-        fat: 14,
-        ingredients: ['basmati rice', 'vegetables', 'spices'],
-        allergens: [],
-        isVeg: true,
-        isVegan: true,
-        isJain: false,
-        available: true,
-        published: true,
-        createdAt: '2026-06-12T10:00:00.000Z',
-        updatedAt: '2026-06-12T10:00:00.000Z',
-      },
-    ],
-  };
-  writeJson(MENU_KEY, store);
-  return store;
-}
-
 function getStore() {
-  const store = readJson(MENU_KEY, {}) || {};
-  return seedGatewayIfNeeded(store);
+  return readJson(MENU_KEY, {}) || {};
 }
 
 function saveStore(store) {
@@ -214,10 +139,6 @@ function normalizeList(value) {
     .filter(Boolean);
 }
 
-/**
- * Create dish for the authenticated restaurant only.
- * Backend: POST /restaurants/me/menu-items
- */
 export async function createMenuItem(payload) {
   const session = await withSession('addDish');
   await delay(400);

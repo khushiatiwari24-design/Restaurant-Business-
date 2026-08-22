@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -17,6 +14,24 @@ enum UserRole {
   RESTAURANT_STAFF
 }
 
+enum RestaurantStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum MembershipRole {
+  RESTAURANT_OWNER
+  RESTAURANT_MANAGER
+  RESTAURANT_STAFF
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -28,5 +43,95 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  memberships RestaurantMembership[]
+
   @@map("users")
+}
+
+model Restaurant {
+  id             String           @id @default(cuid())
+  name           String
+  slug           String           @unique
+  description    String?
+  logoUrl        String?
+  coverImageUrl  String?
+  phone          String
+  email          String
+  address        String
+  city           String
+  state          String?
+  pincode        String?
+  status         RestaurantStatus @default(ACTIVE)
+  deletedAt      DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  memberships   RestaurantMembership[]
+  subscriptions Subscription[]
+  branches      Branch[]
+
+  @@map("restaurants")
+}
+
+model RestaurantMembership {
+  id           String         @id @default(cuid())
+  userId       String
+  restaurantId String
+  role         MembershipRole
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, restaurantId])
+  @@index([restaurantId])
+  @@map("restaurant_memberships")
+}
+
+model SubscriptionPlan {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  name       String
+  priceLabel String
+  features   Json
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id           String             @id @default(cuid())
+  restaurantId String
+  planId       String
+  status       SubscriptionStatus @default(ACTIVE)
+  startedAt    DateTime           @default(now())
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  restaurant Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  plan       SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([restaurantId])
+  @@map("subscriptions")
+}
+
+model Branch {
+  id           String   @id @default(cuid())
+  restaurantId String
+  name         String
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@map("branches")
 }

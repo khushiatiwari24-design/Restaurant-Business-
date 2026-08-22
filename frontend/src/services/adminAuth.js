@@ -5,6 +5,7 @@
  * POST /api/v1/auth/logout
  */
 import { readJson, removeKey, writeJson } from './adminStorage';
+import { apiRequest } from './apiClient';
 
 export const ROLES = {
   SUPER_ADMIN: 'SUPER_ADMIN',
@@ -12,47 +13,6 @@ export const ROLES = {
 };
 
 const SESSION_KEY = 'session';
-const API_BASE =
-  process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1';
-
-async function api(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
-
-  let data = null;
-  const text = await res.text();
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { message: text };
-    }
-  }
-
-  if (!res.ok) {
-    const message =
-      (Array.isArray(data?.message) ? data.message.join(', ') : data?.message) ||
-      'Request failed.';
-    const err = new Error(message);
-    err.code =
-      res.status === 401
-        ? 'UNAUTHORIZED'
-        : res.status === 403
-          ? 'FORBIDDEN'
-          : res.status === 400
-            ? 'VALIDATION'
-            : 'ERROR';
-    err.status = res.status;
-    throw err;
-  }
-
-  return data;
-}
 
 /**
  * Authenticate Super Admin via backend.
@@ -65,7 +25,7 @@ export async function adminLogin({ email, password }) {
     throw err;
   }
 
-  const data = await api('/auth/admin/login', {
+  const data = await apiRequest('/auth/admin/login', {
     method: 'POST',
     body: JSON.stringify({ email: normalized, password }),
   });
@@ -89,7 +49,7 @@ export async function getAdminSession() {
   if (!local?.token) return null;
 
   try {
-    const me = await api('/auth/me', {
+    const me = await apiRequest('/auth/me', {
       method: 'GET',
       headers: { Authorization: `Bearer ${local.token}` },
     });
@@ -110,7 +70,6 @@ export async function getAdminSession() {
       removeKey(SESSION_KEY);
       return null;
     }
-    // Backend unreachable: keep local session for offline mock restaurant APIs
     return local;
   }
 }
@@ -129,7 +88,7 @@ export async function adminLogout() {
   const local = getAdminSessionSync();
   try {
     if (local?.token) {
-      await api('/auth/logout', {
+      await apiRequest('/auth/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${local.token}` },
       });

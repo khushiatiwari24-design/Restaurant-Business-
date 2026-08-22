@@ -7,6 +7,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import type { SafeUser } from '../users/users.service';
 import { AuthService } from './auth.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { RestaurantLoginDto } from './dto/restaurant-login.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -17,9 +18,14 @@ export class AuthController {
     return this.authService.adminLogin(dto.email, dto.password);
   }
 
+  @Post('restaurant/login')
+  restaurantLogin(@Body() dto: RestaurantLoginDto) {
+    return this.authService.restaurantLogin(dto.email, dto.password);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  me(@CurrentUser() user: SafeUser) {
+  me(@CurrentUser() user: SafeUser & { restaurantId?: string }) {
     return this.authService.getMe(user);
   }
 
@@ -29,7 +35,6 @@ export class AuthController {
     return this.authService.logout();
   }
 
-  /** Example protected admin route for guard verification */
   @Get('admin/ping')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(AppRole.SUPER_ADMIN)
