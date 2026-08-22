@@ -69,6 +69,8 @@ model Restaurant {
   memberships   RestaurantMembership[]
   subscriptions Subscription[]
   branches      Branch[]
+  categories    Category[]
+  dishes        Dish[]
 
   @@map("restaurants")
 }
@@ -134,4 +136,56 @@ model Branch {
 
   @@index([restaurantId])
   @@map("branches")
+}
+
+model Category {
+  id           String    @id @default(cuid())
+  restaurantId String
+  name         String
+  slug         String
+  sortOrder    Int       @default(0)
+  isActive     Boolean   @default(true)
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  dishes     Dish[]
+
+  @@unique([restaurantId, slug])
+  @@index([restaurantId])
+  @@map("categories")
+}
+
+model Dish {
+  id             String    @id @default(cuid())
+  restaurantId   String
+  categoryId     String
+  name           String
+  slug           String
+  description    String?
+  price          Decimal   @db.Decimal(10, 2)
+  imageUrl       String?
+  calories       Int?
+  protein        Float?
+  carbohydrates  Float?
+  fat            Float?
+  ingredients    String[]  @default([])
+  allergens      String[]  @default([])
+  isVeg          Boolean   @default(true)
+  isVegan        Boolean   @default(false)
+  isJain         Boolean   @default(false)
+  isAvailable    Boolean   @default(true)
+  isPublished    Boolean   @default(true)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category   Category   @relation(fields: [categoryId], references: [id])
+
+  @@unique([restaurantId, slug])
+  @@index([restaurantId])
+  @@index([categoryId])
+  @@map("dishes")
 }

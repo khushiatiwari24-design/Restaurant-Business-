@@ -40,10 +40,43 @@ export class PublicRestaurantsService {
     if (!restaurant) {
       throw new NotFoundException('Restaurant not found.');
     }
+
+    const dishes = await this.prisma.dish.findMany({
+      where: {
+        restaurantId: restaurant.id,
+        deletedAt: null,
+        isPublished: true,
+        isAvailable: true,
+      },
+      include: { category: true },
+      orderBy: { name: 'asc' },
+    });
+
+    const categories = [
+      ...new Set(dishes.map((d) => d.category.name).filter(Boolean)),
+    ];
+
     return {
       restaurant: this.toPublic(restaurant),
-      categories: [] as string[],
-      dishes: [] as unknown[],
+      categories,
+      dishes: dishes.map((d) => ({
+        id: d.id,
+        name: d.name,
+        slug: d.slug,
+        description: d.description || '',
+        price: Number(d.price),
+        category: d.category.name,
+        imageUrl: d.imageUrl || '',
+        calories: d.calories,
+        protein: d.protein,
+        carbohydrates: d.carbohydrates,
+        fat: d.fat,
+        ingredients: d.ingredients || [],
+        allergens: d.allergens || [],
+        isVeg: d.isVeg,
+        isVegan: d.isVegan,
+        isJain: d.isJain,
+      })),
     };
   }
 

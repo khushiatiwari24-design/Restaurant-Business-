@@ -97,8 +97,8 @@ export default function DishFormPage({ mode = 'create' }) {
   const validate = () => {
     const next = {};
     if (!String(form.name).trim()) next.name = 'Dish name is required';
-    if (form.price === '' || Number.isNaN(Number(form.price)) || Number(form.price) < 0) {
-      next.price = 'Enter a valid price';
+    if (form.price === '' || Number.isNaN(Number(form.price)) || Number(form.price) <= 0) {
+      next.price = 'Enter a valid price greater than 0';
     }
     if (!String(form.category).trim()) next.category = 'Category is required';
     setErrors(next);
@@ -123,8 +123,8 @@ export default function DishFormPage({ mode = 'create' }) {
         await updateMenuItem(dishId, payload);
         push('Dish updated.');
       } else {
-        const created = await createMenuItem(payload);
-        push(`“${created.name}” added to ${user?.restaurantName}.`);
+        await createMenuItem(payload);
+        push('Dish added successfully.');
       }
       navigate('/restaurant/menu');
     } catch (err) {

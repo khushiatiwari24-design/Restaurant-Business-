@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   activateRestaurant,
+  deleteRestaurant,
   getRestaurants,
   suspendRestaurant,
 } from '../services/restaurantsApi';
@@ -20,6 +21,32 @@ function formatDate(iso) {
   } catch {
     return '—';
   }
+}
+
+function confirmCopy(confirm) {
+  if (!confirm) return { title: '', message: '', confirmLabel: 'Confirm', danger: false };
+  if (confirm.action === 'delete') {
+    return {
+      title: 'Delete Restaurant?',
+      message: `Are you sure you want to delete "${confirm.name}"? This action will remove the restaurant from the platform and its associated data.`,
+      confirmLabel: 'Delete Restaurant',
+      danger: true,
+    };
+  }
+  if (confirm.action === 'suspend') {
+    return {
+      title: 'Suspend restaurant?',
+      message: `${confirm.name} will be suspended and customer access can be blocked later via API.`,
+      confirmLabel: 'Suspend',
+      danger: true,
+    };
+  }
+  return {
+    title: 'Activate restaurant?',
+    message: `${confirm.name} will be set back to active.`,
+    confirmLabel: 'Activate',
+    danger: false,
+  };
 }
 
 export default function RestaurantsPage() {
@@ -51,11 +78,14 @@ export default function RestaurantsPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  const runStatusChange = async () => {
+  const runConfirmAction = async () => {
     if (!confirm) return;
     setBusy(true);
     try {
-      if (confirm.action === 'suspend') {
+      if (confirm.action === 'delete') {
+        await deleteRestaurant(confirm.id);
+        push('Restaurant deleted.');
+      } else if (confirm.action === 'suspend') {
         await suspendRestaurant(confirm.id);
         push('Restaurant suspended.');
       } else {
@@ -70,6 +100,8 @@ export default function RestaurantsPage() {
       setBusy(false);
     }
   };
+
+  const dialog = confirmCopy(confirm);
 
   return (
     <div className="admin-page">
@@ -164,7 +196,7 @@ export default function RestaurantsPage() {
                       {r.status === 'active' ? (
                         <button
                           type="button"
-                          className="admin-link-btn danger"
+                          className="admin-link-btn"
                           onClick={() => setConfirm({ id: r.id, name: r.name, action: 'suspend' })}
                         >
                           Suspend
@@ -178,6 +210,13 @@ export default function RestaurantsPage() {
                           Activate
                         </button>
                       )}
+                      <button
+                        type="button"
+                        className="admin-link-btn danger"
+                        onClick={() => setConfirm({ id: r.id, name: r.name, action: 'delete' })}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -189,19 +228,13 @@ export default function RestaurantsPage() {
 
       <ConfirmDialog
         open={Boolean(confirm)}
-        title={confirm?.action === 'suspend' ? 'Suspend restaurant?' : 'Activate restaurant?'}
-        message={
-          confirm
-            ? confirm.action === 'suspend'
-              ? `${confirm.name} will be suspended and customer access can be blocked later via API.`
-              : `${confirm.name} will be set back to active.`
-            : ''
-        }
-        confirmLabel={confirm?.action === 'suspend' ? 'Suspend' : 'Activate'}
-        danger={confirm?.action === 'suspend'}
+        title={dialog.title}
+        message={dialog.message}
+        confirmLabel={dialog.confirmLabel}
+        danger={dialog.danger}
         loading={busy}
         onCancel={() => setConfirm(null)}
-        onConfirm={runStatusChange}
+        onConfirm={runConfirmAction}
       />
     </div>
   );

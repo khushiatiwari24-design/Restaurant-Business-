@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -53,5 +54,10 @@ export class AdminRestaurantsController {
   @Patch(':id/activate')
   activate(@Param('id') id: string) {
     return this.restaurantsService.setStatus(id, RestaurantStatus.ACTIVE);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.restaurantsService.softDelete(id);
   }
 }

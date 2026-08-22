@@ -123,6 +123,13 @@ export async function activateRestaurant(restaurantId) {
   });
 }
 
+export async function deleteRestaurant(restaurantId) {
+  return apiRequest(`/admin/restaurants/${restaurantId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+}
+
 /** @deprecated No local seeding — restaurants come from PostgreSQL only. */
 export function ensureRestaurantsSeeded() {
   return [];

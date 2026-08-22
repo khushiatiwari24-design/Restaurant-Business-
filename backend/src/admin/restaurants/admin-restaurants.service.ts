@@ -24,16 +24,17 @@ export class AdminRestaurantsService {
 
     const where: Prisma.RestaurantWhereInput = {
       deletedAt: null,
+      NOT: { status: RestaurantStatus.ARCHIVED },
     };
 
     if (statusFilter && statusFilter !== 'all') {
       const mapped = statusFilter.toUpperCase();
       if (
         mapped === RestaurantStatus.ACTIVE ||
-        mapped === RestaurantStatus.SUSPENDED ||
-        mapped === RestaurantStatus.ARCHIVED
+        mapped === RestaurantStatus.SUSPENDED
       ) {
         where.status = mapped;
+        delete where.NOT;
       }
     }
 
@@ -185,6 +186,26 @@ export class AdminRestaurantsService {
         },
       });
 
+      const defaultCategories = [
+        'South Indian',
+        'Starters',
+        'Main Course',
+        'Rice',
+        'Beverages',
+        'Desserts',
+      ];
+      await tx.category.createMany({
+        data: defaultCategories.map((name, index) => ({
+          restaurantId: restaurant.id,
+          name,
+          slug: name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, ''),
+          sortOrder: index + 1,
+        })),
+      });
+
       return { restaurant, owner };
     });
 
@@ -236,6 +257,54 @@ export class AdminRestaurantsService {
       throw new NotFoundException('Restaurant not found.');
     }
     return this.toAdminListItem(restaurant);
+  }
+
+  async softDelete(id: string) {
+    const restaurant = await this.prisma.restaurant.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.restaurant.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          status: RestaurantStatus.ARCHIVED,
+        },
+      });
+
+      await tx.restaurantMembership.updateMany({
+        where: { restaurantId: id, isActive: true },
+        data: { isActive: false },
+      });
+
+      await tx.subscription.updateMany({
+        where: { restaurantId: id, status: 'ACTIVE' },
+        data: { status: 'CANCELLED' },
+      });
+
+      // Soft-hide menu so public/menu APIs ignore them if queried later
+      await tx.dish.updateMany({
+        where: { restaurantId: id, deletedAt: null },
+        data: {
+          deletedAt: new Date(),
+          isPublished: false,
+          isAvailable: false,
+        },
+      });
+    });
+
+    return {
+      message: 'Restaurant deleted successfully',
+      restaurant: {
+        id: restaurant.id,
+        name: restaurant.name,
+        status: RestaurantStatus.ARCHIVED,
+      },
+    };
   }
 
   async setStatus(id: string, status: RestaurantStatus) {
