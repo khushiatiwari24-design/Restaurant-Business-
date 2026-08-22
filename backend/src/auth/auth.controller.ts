@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AppRole } from '../common/constants';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
+import { AuthRateLimitGuard } from '../common/guards/auth-rate-limit.guard';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import type { SafeUser } from '../users/users.service';
@@ -14,11 +15,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('admin/login')
+  @UseGuards(AuthRateLimitGuard)
   adminLogin(@Body() dto: AdminLoginDto) {
     return this.authService.adminLogin(dto.email, dto.password);
   }
 
   @Post('restaurant/login')
+  @UseGuards(AuthRateLimitGuard)
   restaurantLogin(@Body() dto: RestaurantLoginDto) {
     return this.authService.restaurantLogin(dto.email, dto.password);
   }

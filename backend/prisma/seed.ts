@@ -98,6 +98,7 @@ async function seedSuperAdmin() {
 }
 
 async function main() {
+  // Seed NEVER creates restaurants. Only Super Admin + subscription plans.
   await seedPlans();
   await seedSuperAdmin();
 }

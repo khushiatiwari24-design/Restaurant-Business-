@@ -130,7 +130,7 @@ export async function deleteRestaurant(restaurantId) {
   });
 }
 
-/** @deprecated No local seeding — restaurants come from PostgreSQL only. */
+/** @deprecated No-op. Restaurants come only from PostgreSQL via Super Admin create. */
 export function ensureRestaurantsSeeded() {
   return [];
 }

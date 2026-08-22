@@ -11,6 +11,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { auditLog } from '../../common/audit-log';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 
@@ -78,7 +79,10 @@ export class AdminRestaurantsService {
     return restaurants.map((r) => this.toAdminListItem(r));
   }
 
-  async create(dto: CreateRestaurantDto) {
+  async create(
+    dto: CreateRestaurantDto,
+    adminUser: { id: string; email?: string },
+  ) {
     const restaurantInput = dto.restaurant;
     const ownerInput = dto.admin || dto.owner;
     const planCode = this.normalizePlanCode(
@@ -147,6 +151,7 @@ export class AdminRestaurantsService {
           state: restaurantInput.state?.trim() || null,
           pincode: restaurantInput.pincode?.trim() || null,
           status: RestaurantStatus.ACTIVE,
+          createdByUserId: adminUser.id,
         },
       });
 
@@ -209,6 +214,14 @@ export class AdminRestaurantsService {
       return { restaurant, owner };
     });
 
+    auditLog('RESTAURANT_CREATED', {
+      adminUserId: adminUser.id,
+      adminEmail: adminUser.email || null,
+      restaurantId: created.restaurant.id,
+      restaurantSlug: created.restaurant.slug,
+      ownerUserId: created.owner.id,
+    });
+
     return {
       message: 'Restaurant created successfully',
       restaurant: {
@@ -216,6 +229,7 @@ export class AdminRestaurantsService {
         name: created.restaurant.name,
         slug: created.restaurant.slug,
         status: created.restaurant.status,
+        createdByUserId: created.restaurant.createdByUserId,
       },
       owner: {
         id: created.owner.id,
@@ -259,7 +273,7 @@ export class AdminRestaurantsService {
     return this.toAdminListItem(restaurant);
   }
 
-  async softDelete(id: string) {
+  async softDelete(id: string, actor?: { id: string }) {
     const restaurant = await this.prisma.restaurant.findFirst({
       where: { id, deletedAt: null },
     });
@@ -297,6 +311,12 @@ export class AdminRestaurantsService {
       });
     });
 
+    auditLog('RESTAURANT_DELETED', {
+      restaurantId: restaurant.id,
+      restaurantSlug: restaurant.slug,
+      adminUserId: actor?.id || null,
+    });
+
     return {
       message: 'Restaurant deleted successfully',
       restaurant: {
@@ -307,7 +327,11 @@ export class AdminRestaurantsService {
     };
   }
 
-  async setStatus(id: string, status: RestaurantStatus) {
+  async setStatus(
+    id: string,
+    status: RestaurantStatus,
+    actor?: { id: string },
+  ) {
     const restaurant = await this.prisma.restaurant.findFirst({
       where: { id, deletedAt: null },
     });
@@ -341,6 +365,19 @@ export class AdminRestaurantsService {
         },
       },
     });
+
+    auditLog(
+      status === RestaurantStatus.SUSPENDED
+        ? 'RESTAURANT_SUSPENDED'
+        : 'RESTAURANT_ACTIVATED',
+      {
+        restaurantId: updated.id,
+        restaurantSlug: updated.slug,
+        status: updated.status,
+        adminUserId: actor?.id || null,
+      },
+    );
+
     return this.toAdminListItem(updated);
   }
 

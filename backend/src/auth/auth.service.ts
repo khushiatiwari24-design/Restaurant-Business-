@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { RestaurantStatus, UserRole } from '@prisma/client';
+import { auditLog } from '../common/audit-log';
 import { PrismaService } from '../prisma/prisma.service';
 import { SafeUser, UsersService } from '../users/users.service';
 
@@ -38,6 +39,11 @@ export class AuthService {
 
     const safeUser = this.usersService.toSafeUser(user);
     const accessToken = await this.signToken(safeUser);
+
+    auditLog('ADMIN_LOGIN', {
+      adminUserId: safeUser.id,
+      email: safeUser.email,
+    });
 
     return {
       accessToken,
@@ -84,6 +90,13 @@ export class AuthService {
 
     const safeUser = this.usersService.toSafeUser(user);
     const accessToken = await this.signToken(safeUser, {
+      restaurantId: membership.restaurantId,
+      membershipRole: membership.role,
+    });
+
+    auditLog('RESTAURANT_LOGIN', {
+      userId: safeUser.id,
+      email: safeUser.email,
       restaurantId: membership.restaurantId,
       membershipRole: membership.role,
     });

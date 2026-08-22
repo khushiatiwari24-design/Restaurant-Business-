@@ -43,35 +43,39 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships RestaurantMembership[]
+  memberships           RestaurantMembership[]
+  restaurantsCreated    Restaurant[]           @relation("RestaurantCreatedBy")
 
   @@map("users")
 }
 
 model Restaurant {
-  id             String           @id @default(cuid())
-  name           String
-  slug           String           @unique
-  description    String?
-  logoUrl        String?
-  coverImageUrl  String?
-  phone          String
-  email          String
-  address        String
-  city           String
-  state          String?
-  pincode        String?
-  status         RestaurantStatus @default(ACTIVE)
-  deletedAt      DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  description     String?
+  logoUrl         String?
+  coverImageUrl   String?
+  phone           String
+  email           String
+  address         String
+  city            String
+  state           String?
+  pincode         String?
+  status          RestaurantStatus @default(ACTIVE)
+  createdByUserId String?
+  deletedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
+  createdBy     User?                    @relation("RestaurantCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   memberships   RestaurantMembership[]
   subscriptions Subscription[]
   branches      Branch[]
   categories    Category[]
   dishes        Dish[]
 
+  @@index([createdByUserId])
   @@map("restaurants")
 }
 

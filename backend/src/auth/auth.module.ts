@@ -15,9 +15,15 @@ import { JwtStrategy } from './jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
+        const secret = config.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error(
+            'JWT_SECRET must be set in the environment (.env). Refusing to start with an insecure default.',
+          );
+        }
         const expiresIn = config.get<string>('JWT_EXPIRES_IN') || '12h';
         return {
-          secret: config.get<string>('JWT_SECRET') || 'dev-only-secret',
+          secret,
           signOptions: {
             expiresIn: expiresIn as `${number}h` | `${number}d` | number,
           },

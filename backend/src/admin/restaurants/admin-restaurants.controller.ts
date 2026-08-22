@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { RestaurantStatus } from '@prisma/client';
 import { AppRole } from '../../common/constants';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -42,22 +43,42 @@ export class AdminRestaurantsController {
   }
 
   @Post()
-  create(@Body() dto: CreateRestaurantDto) {
-    return this.restaurantsService.create(dto);
+  create(
+    @CurrentUser() user: { id: string; email?: string },
+    @Body() dto: CreateRestaurantDto,
+  ) {
+    return this.restaurantsService.create(dto, user);
   }
 
   @Patch(':id/suspend')
-  suspend(@Param('id') id: string) {
-    return this.restaurantsService.setStatus(id, RestaurantStatus.SUSPENDED);
+  suspend(
+    @CurrentUser() user: { id: string },
+    @Param('id') id: string,
+  ) {
+    return this.restaurantsService.setStatus(
+      id,
+      RestaurantStatus.SUSPENDED,
+      user,
+    );
   }
 
   @Patch(':id/activate')
-  activate(@Param('id') id: string) {
-    return this.restaurantsService.setStatus(id, RestaurantStatus.ACTIVE);
+  activate(
+    @CurrentUser() user: { id: string },
+    @Param('id') id: string,
+  ) {
+    return this.restaurantsService.setStatus(
+      id,
+      RestaurantStatus.ACTIVE,
+      user,
+    );
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.restaurantsService.softDelete(id);
+  remove(
+    @CurrentUser() user: { id: string },
+    @Param('id') id: string,
+  ) {
+    return this.restaurantsService.softDelete(id, user);
   }
 }

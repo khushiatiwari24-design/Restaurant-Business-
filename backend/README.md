@@ -16,16 +16,16 @@ API: `http://localhost:3001/api/v1`
 
 ## Auth
 
-- `POST /api/v1/auth/admin/login`
-- `POST /api/v1/auth/restaurant/login`
+- `POST /api/v1/auth/admin/login` (rate-limited)
+- `POST /api/v1/auth/restaurant/login` (rate-limited)
 - `GET  /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
 
-## Admin restaurants (SUPER_ADMIN JWT)
+## Admin restaurants (SUPER_ADMIN JWT only)
 
 - `GET    /api/v1/admin/restaurants`
 - `GET    /api/v1/admin/restaurants/plans`
-- `POST   /api/v1/admin/restaurants`
+- `POST   /api/v1/admin/restaurants` → sets `createdByUserId` from JWT
 - `GET    /api/v1/admin/restaurants/:id`
 - `PATCH  /api/v1/admin/restaurants/:id/suspend`
 - `PATCH  /api/v1/admin/restaurants/:id/activate`
@@ -45,9 +45,26 @@ API: `http://localhost:3001/api/v1`
 - `GET /api/v1/public/restaurants`
 - `GET /api/v1/public/restaurants/:slug` (includes published dishes)
 
-## Seed only
+## Seed (explicit only — never on `start` / `start:dev`)
+
+```bash
+npm run prisma:seed
+```
+
+Seeds **only**:
 
 - Super Admin (from `.env`)
 - Subscription plans: FREE / STARTER / PROFESSIONAL / ENTERPRISE
 
-No demo restaurants or dishes are seeded.
+**Does not create restaurants.** Restaurant rows are created only when a Super Admin calls `POST /admin/restaurants`.
+
+## Maintenance
+
+```bash
+# Soft-delete known local agent/test restaurants (keeps Gateway / Vinit Kitchen)
+node scripts/cleanup-test-restaurants.js
+```
+
+## Required env
+
+See `.env.example`. `JWT_SECRET` is required — the API will not start with a hardcoded fallback.
