@@ -69,12 +69,24 @@ export function getPublishedMenuByRestaurantId() {
 }
 
 export async function getRestaurantProfile() {
-  const session = await withSession();
-  return {
-    id: session.user.restaurantId,
-    slug: session.user.restaurantSlug,
-    name: session.user.restaurantName,
-  };
+  await withSession();
+  return apiRequest('/restaurants/me', {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+}
+
+export async function updateRestaurantProfile(payload) {
+  await withSession('manageProfile');
+  const body = { ...payload };
+  Object.keys(body).forEach((k) => {
+    if (body[k] === undefined) delete body[k];
+  });
+  return apiRequest('/restaurants/me', {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
 }
 
 export async function getCategories() {
@@ -175,22 +187,8 @@ export async function getRestaurantQRCodes() {
 
 export async function getRestaurantDashboardStats() {
   await withSession('viewDashboard');
-  const [dishes, categories] = await Promise.all([
-    apiRequest('/restaurants/me/dishes', {
-      method: 'GET',
-      headers: authHeaders(),
-    }),
-    apiRequest('/restaurants/me/categories', {
-      method: 'GET',
-      headers: authHeaders(),
-    }),
-  ]);
-  return {
-    totalDishes: dishes.length,
-    availableDishes: dishes.filter((d) => d.available).length,
-    unavailableDishes: dishes.filter((d) => !d.available).length,
-    categories: categories.length,
-    tables: 0,
-    activeQrCodes: 0,
-  };
+  return apiRequest('/restaurants/me/dashboard', {
+    method: 'GET',
+    headers: authHeaders(),
+  });
 }

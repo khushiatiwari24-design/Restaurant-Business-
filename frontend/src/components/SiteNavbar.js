@@ -71,7 +71,7 @@ export default function SiteNavbar() {
   const openRestaurant = (slug) => {
     setOpen(false);
     setSearch('');
-    navigate(`/restaurant/${slug}`);
+    navigate(`/r/${slug}`);
   };
 
   return (

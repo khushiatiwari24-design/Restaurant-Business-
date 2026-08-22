@@ -67,6 +67,7 @@ export class PublicRestaurantsService {
         price: Number(d.price),
         category: d.category.name,
         imageUrl: d.imageUrl || '',
+        image: d.imageUrl || '',
         calories: d.calories,
         protein: d.protein,
         carbohydrates: d.carbohydrates,

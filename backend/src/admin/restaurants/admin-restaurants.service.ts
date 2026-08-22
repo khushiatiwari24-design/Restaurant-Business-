@@ -7,17 +7,22 @@ import {
 import {
   MembershipRole,
   Prisma,
+  QrCodeStatus,
   RestaurantStatus,
   UserRole,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { auditLog } from '../../common/audit-log';
 import { PrismaService } from '../../prisma/prisma.service';
+import { QrService } from '../../qr/qr.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 
 @Injectable()
 export class AdminRestaurantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly qrService: QrService,
+  ) {}
 
   async list(query: { search?: string; status?: string } = {}) {
     const search = String(query.search || '').trim();
@@ -211,7 +216,9 @@ export class AdminRestaurantsService {
         })),
       });
 
-      return { restaurant, owner };
+      const qr = await this.qrService.createPrimaryInTransaction(tx, restaurant);
+
+      return { restaurant, owner, qr };
     });
 
     auditLog('RESTAURANT_CREATED', {
@@ -220,6 +227,8 @@ export class AdminRestaurantsService {
       restaurantId: created.restaurant.id,
       restaurantSlug: created.restaurant.slug,
       ownerUserId: created.owner.id,
+      qrId: created.qr.id,
+      qrToken: created.qr.token,
     });
 
     return {
@@ -237,6 +246,7 @@ export class AdminRestaurantsService {
         email: created.owner.email,
         role: created.owner.role,
       },
+      qr: this.qrService.toPublicQr(created.qr),
     };
   }
 
@@ -308,6 +318,11 @@ export class AdminRestaurantsService {
           isPublished: false,
           isAvailable: false,
         },
+      });
+
+      await tx.qrCode.updateMany({
+        where: { restaurantId: id, status: QrCodeStatus.ACTIVE },
+        data: { status: QrCodeStatus.DISABLED },
       });
     });
 

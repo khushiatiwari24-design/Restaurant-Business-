@@ -90,7 +90,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   const scrollToSearch = () => {
-    const target = document.getElementById('menu-search');
+    const target = document.getElementById('menu-section');
 
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -483,162 +483,102 @@ function App() {
     <div className="app">
       <SiteNavbar />
       <HeroSection onExploreMenu={scrollToSearch} />
-      <SearchAndFilter 
-        id="menu-search"
-        searchText={searchText}
-        setSearchText={setSearchText}
-        selectedPriceRange={selectedPriceRange}
-        setSelectedPriceRange={setSelectedPriceRange}
-        priceRangeOptions={priceRangeOptions}
-      />
-      <CategoryFilter 
-        categories={categories}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
-      />
-      <ResultCount count={filteredItems.length} />
-      <MenuGrid items={filteredItems} />
+      <main id="menu-section" className="menu-container">
+        <SearchAndFilter
+          searchText={searchText}
+          setSearchText={setSearchText}
+          selectedPriceRange={selectedPriceRange}
+          setSelectedPriceRange={setSelectedPriceRange}
+          priceRangeOptions={priceRangeOptions}
+        />
+        <CategoryFilter
+          categories={categories}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+        />
+        <ResultCount count={filteredItems.length} />
+        <MenuGrid items={filteredItems} />
+      </main>
     </div>
   );
 }
 
 function HeroSection({ onExploreMenu }) {
-  const featuredCards = [
-    { title: 'Paneer Butter Masala', subtitle: 'Creamy • Rich • Comforting', emoji: '🍛' },
-    { title: 'Garlic Naan', subtitle: 'Soft • Buttered • Fresh', emoji: '🫓' },
-    { title: 'Hyderabadi Biryani', subtitle: 'Aromatic • Spiced • Regal', emoji: '🍚' },
-    { title: 'Tandoori Platter', subtitle: 'Smoky • Charred • Bold', emoji: '🔥' },
-  ];
-
   return (
     <section className="hero-section">
-      <div className="hero-glow hero-glow-left" aria-hidden="true" />
-      <div className="hero-glow hero-glow-right" aria-hidden="true" />
+      <video className="hero-video-bg" autoPlay loop muted playsInline>
+        <source src="/hero-food.mp4" type="video/mp4" />
+      </video>
 
-      <div className="hero-copy">
-        <div className="hero-brand-row">
-          <span className="hero-badge">DilYum</span>
-          <span className="hero-tagline">(Dil Bole Yum)</span>
-        </div>
+      <div className="hero-dark-overlay">
+        <img
+          src="/dilyum-logo.png"
+          alt="DilYum - Dil Bole Yum"
+          className="hero-center-logo"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
 
-        <h1>Craving Something Extraordinary?</h1>
         <p className="hero-subtitle">
-          Warm Indian comfort, modern presentation, and dishes that feel like a feast before the first bite.
+          Authentic Indian Flavors • Live Kitchen • Scan & Order Smart
         </p>
 
-        <div className="hero-actions">
-          <button type="button" className="hero-cta" onClick={onExploreMenu}>
-            <span className="hero-cta-icon" aria-hidden="true">🔍</span>
-            <span>Explore Menu & Search Dishes</span>
-          </button>
-          <p className="hero-note">Search by name, category, or even fuzzy spellings.</p>
-        </div>
+        <button type="button" className="hero-explore-btn" onClick={onExploreMenu}>
+          Explore Food Menu & Restaurants →
+        </button>
 
-        <div className="hero-stats" aria-label="App highlights">
-          <div className="hero-stat">
+        <div className="hero-feature-row" aria-label="App highlights">
+          <div className="feature-pill">
             <strong>300+</strong>
             <span>menu items</span>
           </div>
-          <div className="hero-stat">
+          <div className="feature-pill">
             <strong>Fuzzy</strong>
             <span>search enabled</span>
           </div>
-          <div className="hero-stat">
+          <div className="feature-pill">
             <strong>Mobile</strong>
             <span>friendly layout</span>
           </div>
         </div>
       </div>
-
-      <div className="hero-visual" aria-hidden="true">
-        <div className="hero-plate">
-          <div className="hero-plate-center">
-            <span className="hero-steam hero-steam-one" />
-            <span className="hero-steam hero-steam-two" />
-            <span className="hero-steam hero-steam-three" />
-            <span className="hero-plate-title">Today's craving</span>
-            <strong>Hot, fragrant, and ready to explore</strong>
-          </div>
-        </div>
-
-        <div className="hero-floating-card hero-floating-card-one">
-          <span className="hero-floating-emoji">🍛</span>
-          <div>
-            <strong>Paneer Butter Masala</strong>
-            <p>Silky gravy with soft paneer cubes</p>
-          </div>
-        </div>
-
-        <div className="hero-floating-card hero-floating-card-two">
-          <span className="hero-floating-emoji">🫓</span>
-          <div>
-            <strong>Garlic Naan</strong>
-            <p>Fresh from the tandoor</p>
-          </div>
-        </div>
-
-        <div className="hero-floating-card hero-floating-card-three">
-          <span className="hero-floating-emoji">🍚</span>
-          <div>
-            <strong>Biryani</strong>
-            <p>Aromatic rice layered with spice</p>
-          </div>
-        </div>
-
-        <div className="hero-floating-card hero-floating-card-four">
-          <span className="hero-floating-emoji">🔥</span>
-          <div>
-            <strong>Tandoori Platter</strong>
-            <p>Smoky, spicy, shareable</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="hero-mini-gallery" aria-hidden="true">
-        {featuredCards.map((card, index) => (
-          <article key={card.title} className={`hero-menu-chip hero-menu-chip-${index + 1}`}>
-            <span className="hero-menu-chip-emoji">{card.emoji}</span>
-            <div>
-              <strong>{card.title}</strong>
-              <span>{card.subtitle}</span>
-            </div>
-          </article>
-        ))}
-      </div>
     </section>
   );
 }
 
-function SearchAndFilter({ id, searchText, setSearchText, selectedPriceRange, setSelectedPriceRange, priceRangeOptions }) {
+function SearchAndFilter({ searchText, setSearchText, selectedPriceRange, setSelectedPriceRange, priceRangeOptions }) {
   return (
-    <div className="search-filter-section" id={id}>
-      <div className="search-container">
+    <div className="search-filter-card">
+      <div className="search-input-wrapper">
+        <span className="search-icon" aria-hidden="true">🔍</span>
         <input
           type="text"
-          className="search-input"
-          placeholder="🔍 Search dishes, categories, or ingredients..."
+          className="main-search-input"
+          placeholder="Search dishes, categories, or ingredients (e.g. paneer, butter)..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
+        {searchText ? (
+          <button type="button" className="clear-btn" onClick={() => setSearchText('')} aria-label="Clear search">
+            ✕
+          </button>
+        ) : null}
       </div>
 
-      <div className="price-filter-container">
-        <div className="price-slider-group">
-          <label className="price-label">Price Range</label>
-          <div className="price-select-wrapper">
-            <select
-              className="price-select"
-              value={selectedPriceRange}
-              onChange={(e) => setSelectedPriceRange(e.target.value)}
-            >
-              {priceRangeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+      <div className="filter-dropdown-wrapper">
+        <select
+          className="price-select"
+          value={selectedPriceRange}
+          onChange={(e) => setSelectedPriceRange(e.target.value)}
+          aria-label="Price range"
+        >
+          {priceRangeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );
@@ -646,28 +586,27 @@ function SearchAndFilter({ id, searchText, setSearchText, selectedPriceRange, se
 
 function CategoryFilter({ categories, selectedCategory, setSelectedCategory }) {
   return (
-    <div className="category-filter">
-      <div className="category-scroll">
-        {categories.map(cat => (
-          <button
-            key={cat.id}
-            className={`category-btn ${selectedCategory === cat.id ? "active" : ""}`}
-            onClick={() => setSelectedCategory(cat.id)}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
+    <div className="category-scroll-strip">
+      {categories.map((cat) => (
+        <button
+          key={cat.id}
+          type="button"
+          className={`cat-pill ${selectedCategory === cat.id ? 'active' : ''}`}
+          onClick={() => setSelectedCategory(cat.id)}
+        >
+          {cat.label}
+        </button>
+      ))}
     </div>
   );
 }
 
 function ResultCount({ count }) {
   return (
-    <div className="result-info">
-      <p className="result-count">
-        Found <span className="count-number">{count}</span> dish{count === 1 ? "" : "es"}
-      </p>
+    <div className="results-info">
+      <span>
+        Showing <strong>{count}</strong> delicious item{count === 1 ? '' : 's'}
+      </span>
     </div>
   );
 }
@@ -684,8 +623,8 @@ function MenuGrid({ items }) {
   }
 
   return (
-    <div className="grid">
-      {items.map(item => (
+    <div className="dish-grid">
+      {items.map((item) => (
         <DishCard key={item.id} item={item} />
       ))}
     </div>
@@ -714,31 +653,31 @@ function DishCard({ item }) {
   return (
     <>
       <div className="dish-card" onClick={() => setIsOpen(true)}>
-        <img
-          src={item.image || fallbackImage}
-          alt={item.name}
-          className="dish-img"
-          onError={(e) => {
-            e.target.src = fallbackImage;
-          }}
-        />
-
-        <div className="card-header">
-          <h3 className="card-name">{item.name}</h3>
-          <div className="card-price">₹{item.price}</div>
+        <div className="dish-img-wrapper">
+          <img
+            src={item.image || fallbackImage}
+            alt={item.name}
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = fallbackImage;
+            }}
+          />
         </div>
 
-        <div className="card-ingredients-preview">
-          {ingredients.slice(0, 2).map((ing, idx) => (
-            <span key={idx} className="ingredient-tag">{ing}</span>
-          ))}
-          {ingredients.length > 2 && (
-            <span className="ingredient-tag more">+{ingredients.length - 2} more</span>
-          )}
-        </div>
+        <div className="dish-content">
+          <div className="dish-header">
+            <h3 className="dish-title">{item.name}</h3>
+            <span className="dish-price">₹{item.price}</span>
+          </div>
 
-        <div className="card-footer">
-          <p className="click-hint">Click for ingredients</p>
+          <div className="dish-tags">
+            {ingredients.slice(0, 3).map((ing, idx) => (
+              <span key={idx} className="tag-badge">{ing}</span>
+            ))}
+            {ingredients.length > 3 && (
+              <span className="tag-badge">+{ingredients.length - 3} more</span>
+            )}
+          </div>
         </div>
       </div>
 

@@ -79,7 +79,10 @@ export async function getRestaurantSession() {
       headers: { Authorization: `Bearer ${local.token}` },
     });
 
+    // Keep a still-valid local session if /auth/me omits restaurant briefly
+    // (stale JWT claim, etc.) instead of wiping the portal mid-navigation.
     if (!me?.restaurant?.id) {
+      if (local.user?.restaurantId) return local;
       removeKey(SESSION_KEY);
       return null;
     }
@@ -102,10 +105,11 @@ export async function getRestaurantSession() {
     writeJson(SESSION_KEY, session);
     return session;
   } catch (err) {
-    if (err.code === 'UNAUTHORIZED' || err.code === 'FORBIDDEN') {
+    if (err.code === 'UNAUTHORIZED') {
       removeKey(SESSION_KEY);
       return null;
     }
+    // Network / 5xx: keep local session so dashboard/menu keep working
     return local;
   }
 }

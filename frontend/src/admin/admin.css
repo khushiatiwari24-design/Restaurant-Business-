@@ -421,6 +421,13 @@
   width: 100%;
 }
 
+.admin-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
 .admin-password-wrap {
   position: relative;
   display: grid;
@@ -486,8 +493,9 @@
   font-weight: 600;
 }
 
-.admin-field.span-2 {
-  grid-column: span 2;
+.admin-field.span-2,
+.admin-field-full {
+  grid-column: 1 / -1;
 }
 
 .admin-field-error {

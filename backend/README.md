@@ -1,11 +1,10 @@
 # DilYum Backend (NestJS)
 
-Phase 1–3: Super Admin auth, restaurants (create / soft-delete), restaurant dishes.
+Phase 1–4: Super Admin auth, restaurants, dishes, QR codes.
 
 ## Quick start
 
 ```bash
-# Point DATABASE_URL at your Postgres DB (e.g. Restaurant_DB on :5432)
 npm install
 npx prisma migrate dev
 npm run prisma:seed
@@ -21,50 +20,44 @@ API: `http://localhost:3001/api/v1`
 - `GET  /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
 
-## Admin restaurants (SUPER_ADMIN JWT only)
+## Admin restaurants (SUPER_ADMIN)
 
-- `GET    /api/v1/admin/restaurants`
-- `GET    /api/v1/admin/restaurants/plans`
-- `POST   /api/v1/admin/restaurants` → sets `createdByUserId` from JWT
-- `GET    /api/v1/admin/restaurants/:id`
-- `PATCH  /api/v1/admin/restaurants/:id/suspend`
-- `PATCH  /api/v1/admin/restaurants/:id/activate`
-- `DELETE /api/v1/admin/restaurants/:id` (soft delete → `deletedAt` + `ARCHIVED`)
+- `POST /api/v1/admin/restaurants` — creates restaurant **and** primary QR in one transaction
+- `DELETE /api/v1/admin/restaurants/:id` — soft delete; disables active QR codes
 
-## Restaurant portal menu (JWT + membership; restaurant from token)
+## Admin QR (SUPER_ADMIN)
 
-- `GET    /api/v1/restaurants/me/categories`
-- `GET    /api/v1/restaurants/me/dishes`
-- `POST   /api/v1/restaurants/me/dishes`
-- `GET    /api/v1/restaurants/me/dishes/:id`
-- `PATCH  /api/v1/restaurants/me/dishes/:id`
-- `DELETE /api/v1/restaurants/me/dishes/:id`
+- `GET  /api/v1/admin/qr`
+- `POST /api/v1/admin/qr/backfill` — idempotent; never creates restaurants
+- `GET  /api/v1/admin/restaurants/:id/qr`
+- `POST /api/v1/admin/restaurants/:id/qr/regenerate`
+
+## Restaurant portal QR
+
+- `GET  /api/v1/restaurants/me/qr`
+- `POST /api/v1/restaurants/me/qr/regenerate`
 
 ## Public
 
 - `GET /api/v1/public/restaurants`
-- `GET /api/v1/public/restaurants/:slug` (includes published dishes)
+- `GET /api/v1/public/restaurants/:slug`
+- `GET /api/v1/public/qr/:token?slug=` — resolve QR → public restaurant + menu
 
-## Seed (explicit only — never on `start` / `start:dev`)
+Customer QR destination (from `PUBLIC_WEB_URL`):
 
-```bash
-npm run prisma:seed
-```
+`{PUBLIC_WEB_URL}/r/{slug}/t/{token}#menu`
 
-Seeds **only**:
+## Seed
 
-- Super Admin (from `.env`)
-- Subscription plans: FREE / STARTER / PROFESSIONAL / ENTERPRISE
-
-**Does not create restaurants.** Restaurant rows are created only when a Super Admin calls `POST /admin/restaurants`.
+`npm run prisma:seed` creates Super Admin + plans only — **no restaurants, no QR codes**.
 
 ## Maintenance
 
 ```bash
-# Soft-delete known local agent/test restaurants (keeps Gateway / Vinit Kitchen)
+node scripts/backfill-qr-codes.js   # missing QRs for existing restaurants
 node scripts/cleanup-test-restaurants.js
 ```
 
 ## Required env
 
-See `.env.example`. `JWT_SECRET` is required — the API will not start with a hardcoded fallback.
+See `.env.example`. Requires `JWT_SECRET` and `PUBLIC_WEB_URL` (or `FRONTEND_ORIGIN`).

@@ -32,6 +32,11 @@ enum SubscriptionStatus {
   PAST_DUE
 }
 
+enum QrCodeStatus {
+  ACTIVE
+  DISABLED
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -74,6 +79,7 @@ model Restaurant {
   branches      Branch[]
   categories    Category[]
   dishes        Dish[]
+  qrCodes       QrCode[]
 
   @@index([createdByUserId])
   @@map("restaurants")
@@ -192,4 +198,20 @@ model Dish {
   @@index([restaurantId])
   @@index([categoryId])
   @@map("dishes")
+}
+
+model QrCode {
+  id           String      @id @default(cuid())
+  restaurantId String
+  token        String      @unique
+  targetUrl    String
+  status       QrCodeStatus @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@index([restaurantId, status])
+  @@map("qr_codes")
 }

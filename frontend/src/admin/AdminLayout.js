@@ -6,7 +6,7 @@ const NAV = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/restaurants', label: 'Restaurants' },
   { to: '/admin/restaurants/new', label: 'Add Restaurant' },
-  { to: '/admin/qr', label: 'QR Management', soon: true },
+  { to: '/admin/qr', label: 'QR Management' },
   { to: '/admin/analytics', label: 'Analytics', soon: true },
   { to: '/admin/subscriptions', label: 'Subscriptions', soon: true },
   { to: '/admin/settings', label: 'Settings', soon: true },

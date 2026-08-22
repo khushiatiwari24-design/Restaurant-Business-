@@ -59,7 +59,7 @@ export default function AdminDashboard() {
             Create Restaurant
           </Link>
           <Link to="/admin/qr" className="admin-btn admin-btn-ghost">
-            QR Management (soon)
+            QR Management
           </Link>
         </div>
         <p className="admin-muted admin-mt">

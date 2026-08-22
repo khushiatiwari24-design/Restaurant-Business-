@@ -129,17 +129,32 @@ export class AuthService {
       return base;
     }
 
-    const membership = await this.prisma.restaurantMembership.findFirst({
-      where: {
-        userId: user.id,
-        isActive: true,
-        ...(user.restaurantId ? { restaurantId: user.restaurantId } : {}),
-      },
-      include: { restaurant: true },
-      orderBy: { createdAt: 'asc' },
-    });
+    // Prefer JWT restaurantId, but fall back to any active membership so a
+    // stale claim never blanks the portal session.
+    let membership = user.restaurantId
+      ? await this.prisma.restaurantMembership.findFirst({
+          where: {
+            userId: user.id,
+            restaurantId: user.restaurantId,
+            isActive: true,
+          },
+          include: { restaurant: true },
+        })
+      : null;
 
     if (!membership) {
+      membership = await this.prisma.restaurantMembership.findFirst({
+        where: { userId: user.id, isActive: true },
+        include: { restaurant: true },
+        orderBy: { createdAt: 'asc' },
+      });
+    }
+
+    if (
+      !membership ||
+      membership.restaurant.deletedAt ||
+      membership.restaurant.status === RestaurantStatus.ARCHIVED
+    ) {
       return base;
     }
 
@@ -149,6 +164,7 @@ export class AuthService {
         id: membership.restaurant.id,
         name: membership.restaurant.name,
         slug: membership.restaurant.slug,
+        status: membership.restaurant.status,
       },
     };
   }

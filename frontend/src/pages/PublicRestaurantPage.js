@@ -1,15 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import Fuse from 'fuse.js';
 import SiteNavbar from '../components/SiteNavbar';
 import { getPublicRestaurantBySlug } from '../services/publicRestaurantsApi';
+import { resolvePublicQr } from '../services/qrApi';
 
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=500&q=80';
 
 export default function PublicRestaurantPage() {
-  const { restaurantSlug } = useParams();
+  const { restaurantSlug, token } = useParams();
+  const location = useLocation();
+  const fromQr = Boolean(token) || location.hash === '#menu';
   const [data, setData] = useState(null);
+  const [unavailable, setUnavailable] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchText, setSearchText] = useState('');
@@ -19,14 +23,27 @@ export default function PublicRestaurantPage() {
     let alive = true;
     setLoading(true);
     setError('');
+    setUnavailable('');
     setData(null);
     setSearchText('');
     setSelectedCategory('all');
 
     (async () => {
       try {
-        const payload = await getPublicRestaurantBySlug(restaurantSlug);
-        if (alive) setData(payload);
+        if (token) {
+          const payload = await resolvePublicQr(token, restaurantSlug);
+          if (!alive) return;
+          if (!payload.available) {
+            setUnavailable(
+              payload.message || 'This restaurant is currently unavailable.',
+            );
+            return;
+          }
+          setData(payload);
+        } else {
+          const payload = await getPublicRestaurantBySlug(restaurantSlug);
+          if (alive) setData(payload);
+        }
       } catch (err) {
         if (alive) setError(err.message || 'Restaurant not found.');
       } finally {
@@ -37,7 +54,20 @@ export default function PublicRestaurantPage() {
     return () => {
       alive = false;
     };
-  }, [restaurantSlug]);
+  }, [restaurantSlug, token]);
+
+  useEffect(() => {
+    if (loading || !fromQr || unavailable || error) return;
+    const t = window.setTimeout(() => {
+      const el =
+        document.getElementById('menu') ||
+        document.getElementById('restaurant-menu-search');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+    return () => window.clearTimeout(t);
+  }, [loading, fromQr, unavailable, error, data]);
 
   const filteredDishes = useMemo(() => {
     if (!data?.dishes) return [];
@@ -80,6 +110,21 @@ export default function PublicRestaurantPage() {
     );
   }
 
+  if (unavailable) {
+    return (
+      <div className="app public-restaurant-page">
+        <SiteNavbar />
+        <section className="public-rest-not-found">
+          <h1>Restaurant Unavailable</h1>
+          <p>{unavailable}</p>
+          <Link to="/" className="hero-cta public-rest-back-cta">
+            Back to DilYum
+          </Link>
+        </section>
+      </div>
+    );
+  }
+
   if (error || !data?.restaurant) {
     return (
       <div className="app public-restaurant-page">
@@ -96,7 +141,7 @@ export default function PublicRestaurantPage() {
   }
 
   const { restaurant, categories, dishes } = data;
-  const location = [restaurant.city, restaurant.state].filter(Boolean).join(', ');
+  const locationLabel = [restaurant.city, restaurant.state].filter(Boolean).join(', ');
 
   return (
     <div className="app public-restaurant-page">
@@ -106,7 +151,9 @@ export default function PublicRestaurantPage() {
         className="public-rest-hero"
         style={
           restaurant.coverUrl
-            ? { backgroundImage: `linear-gradient(135deg, rgba(28,25,23,0.92), rgba(49,27,13,0.88)), url(${restaurant.coverUrl})` }
+            ? {
+                backgroundImage: `linear-gradient(135deg, rgba(28,25,23,0.92), rgba(49,27,13,0.88)), url(${restaurant.coverUrl})`,
+              }
             : undefined
         }
       >
@@ -114,11 +161,18 @@ export default function PublicRestaurantPage() {
           {restaurant.logoUrl ? (
             <img className="public-rest-logo" src={restaurant.logoUrl} alt="" />
           ) : (
-            <span className="public-rest-logo-fallback" aria-hidden="true">🍽</span>
+            <span className="public-rest-logo-fallback" aria-hidden="true">
+              🍽
+            </span>
           )}
           <div>
             <h1>{restaurant.name}</h1>
-            {location ? <p className="public-rest-location">{location}</p> : null}
+            {locationLabel ? (
+              <p className="public-rest-location">{locationLabel}</p>
+            ) : null}
+            {restaurant.address ? (
+              <p className="public-rest-location">{restaurant.address}</p>
+            ) : null}
             {restaurant.description ? (
               <p className="public-rest-desc">{restaurant.description}</p>
             ) : null}
@@ -126,11 +180,15 @@ export default function PublicRestaurantPage() {
         </div>
       </section>
 
+      <div id="menu" />
+
       {dishes.length === 0 ? (
         <section className="public-rest-empty">
           <h2>Menu coming soon.</h2>
           <p>This restaurant hasn&apos;t published its menu yet.</p>
-          <Link to="/" className="site-navbar-login">Back to DilYum</Link>
+          <Link to="/" className="site-navbar-login">
+            Back to DilYum
+          </Link>
         </section>
       ) : (
         <>
@@ -203,7 +261,7 @@ function PublicDishCard({ item }) {
   const [isOpen, setIsOpen] = useState(false);
   const ingredients = item.ingredients ?? [];
   const allergens = item.allergens ?? [];
-  const image = item.image || FALLBACK_IMAGE;
+  const image = item.imageUrl || item.image || FALLBACK_IMAGE;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -238,11 +296,19 @@ function PublicDishCard({ item }) {
           <p className="public-dish-desc">{item.description}</p>
         ) : null}
         <div className="card-ingredients-preview">
-          {item.isVeg ? <span className="ingredient-tag">Veg</span> : <span className="ingredient-tag more">Non-Veg</span>}
+          {item.isVeg ? (
+            <span className="ingredient-tag">Veg</span>
+          ) : (
+            <span className="ingredient-tag more">Non-Veg</span>
+          )}
           {item.isVegan ? <span className="ingredient-tag">Vegan</span> : null}
-          {item.calories != null ? <span className="ingredient-tag more">{item.calories} cal</span> : null}
+          {item.calories != null ? (
+            <span className="ingredient-tag more">{item.calories} cal</span>
+          ) : null}
           {ingredients.slice(0, 1).map((ing) => (
-            <span key={ing} className="ingredient-tag">{ing}</span>
+            <span key={ing} className="ingredient-tag">
+              {ing}
+            </span>
           ))}
         </div>
         <div className="card-footer">
@@ -251,7 +317,11 @@ function PublicDishCard({ item }) {
       </div>
 
       {isOpen ? (
-        <div className="dish-modal-overlay" onClick={() => setIsOpen(false)} role="presentation">
+        <div
+          className="dish-modal-overlay"
+          onClick={() => setIsOpen(false)}
+          role="presentation"
+        >
           <div
             className="dish-modal"
             onClick={(e) => e.stopPropagation()}
@@ -259,7 +329,12 @@ function PublicDishCard({ item }) {
             aria-modal="true"
             aria-label={item.name}
           >
-            <button type="button" className="dish-modal-close" onClick={() => setIsOpen(false)} aria-label="Close">
+            <button
+              type="button"
+              className="dish-modal-close"
+              onClick={() => setIsOpen(false)}
+              aria-label="Close"
+            >
               ×
             </button>
             <img
@@ -275,11 +350,15 @@ function PublicDishCard({ item }) {
                 <h3 className="dish-modal-name">{item.name}</h3>
                 <div className="card-price">₹{item.price}</div>
               </div>
-              {item.description ? <p className="public-dish-desc modal">{item.description}</p> : null}
+              {item.description ? (
+                <p className="public-dish-desc modal">{item.description}</p>
+              ) : null}
 
               <div className="public-dish-flags">
                 {item.isVeg ? <span className="ingredient-tag">Veg</span> : null}
-                {!item.isVeg ? <span className="ingredient-tag more">Non-Veg</span> : null}
+                {!item.isVeg ? (
+                  <span className="ingredient-tag more">Non-Veg</span>
+                ) : null}
                 {item.isVegan ? <span className="ingredient-tag">Vegan</span> : null}
                 {item.isJain ? <span className="ingredient-tag">Jain</span> : null}
               </div>
@@ -289,7 +368,9 @@ function PublicDishCard({ item }) {
                   <p className="ingredients-label">Ingredients:</p>
                   <div className="ingredients-list">
                     {ingredients.map((ing) => (
-                      <span key={ing} className="ingredient-full">{ing}</span>
+                      <span key={ing} className="ingredient-full">
+                        {ing}
+                      </span>
                     ))}
                   </div>
                 </>
@@ -297,23 +378,42 @@ function PublicDishCard({ item }) {
 
               {allergens.length > 0 ? (
                 <>
-                  <p className="ingredients-label" style={{ marginTop: 14 }}>Allergens:</p>
+                  <p className="ingredients-label" style={{ marginTop: 14 }}>
+                    Allergens:
+                  </p>
                   <div className="ingredients-list">
                     {allergens.map((a) => (
-                      <span key={a} className="ingredient-full">{a}</span>
+                      <span key={a} className="ingredient-full">
+                        {a}
+                      </span>
                     ))}
                   </div>
                 </>
               ) : null}
 
-              {(item.calories != null || item.protein != null || item.carbohydrates != null || item.fat != null) ? (
+              {item.calories != null ||
+              item.protein != null ||
+              item.carbohydrates != null ||
+              item.fat != null ? (
                 <>
-                  <p className="ingredients-label" style={{ marginTop: 14 }}>Nutrition:</p>
+                  <p className="ingredients-label" style={{ marginTop: 14 }}>
+                    Nutrition:
+                  </p>
                   <div className="ingredients-list">
-                    {item.calories != null ? <span className="ingredient-full">{item.calories} kcal</span> : null}
-                    {item.protein != null ? <span className="ingredient-full">Protein {item.protein}g</span> : null}
-                    {item.carbohydrates != null ? <span className="ingredient-full">Carbs {item.carbohydrates}g</span> : null}
-                    {item.fat != null ? <span className="ingredient-full">Fat {item.fat}g</span> : null}
+                    {item.calories != null ? (
+                      <span className="ingredient-full">{item.calories} kcal</span>
+                    ) : null}
+                    {item.protein != null ? (
+                      <span className="ingredient-full">Protein {item.protein}g</span>
+                    ) : null}
+                    {item.carbohydrates != null ? (
+                      <span className="ingredient-full">
+                        Carbs {item.carbohydrates}g
+                      </span>
+                    ) : null}
+                    {item.fat != null ? (
+                      <span className="ingredient-full">Fat {item.fat}g</span>
+                    ) : null}
                   </div>
                 </>
               ) : null}

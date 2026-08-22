@@ -6,6 +6,7 @@ import AdminLogin from './admin/AdminLogin';
 import AdminLayout from './admin/AdminLayout';
 import AdminDashboard from './admin/AdminDashboard';
 import AdminPlaceholder from './admin/AdminPlaceholder';
+import AdminQrPage from './admin/AdminQrPage';
 import AddRestaurantPage from './admin/AddRestaurantPage';
 import RestaurantsPage from './admin/RestaurantsPage';
 import RestaurantDetailPage from './admin/RestaurantDetailPage';
@@ -20,6 +21,8 @@ import RestaurantDashboard from './restaurant/RestaurantDashboard';
 import RestaurantMenuPage from './restaurant/RestaurantMenuPage';
 import DishFormPage from './restaurant/DishFormPage';
 import RestaurantPlaceholder from './restaurant/RestaurantPlaceholder';
+import RestaurantProfilePage from './restaurant/RestaurantProfilePage';
+import RestaurantQrPage from './restaurant/RestaurantQrPage';
 import PublicRestaurantPage from './pages/PublicRestaurantPage';
 
 export default function AppRouter() {
@@ -31,7 +34,6 @@ export default function AppRouter() {
             <Routes>
               <Route path="/" element={<CustomerApp />} />
 
-              {/* Super Admin */}
               <Route path="/admin-login" element={<AdminLogin />} />
               <Route
                 path="/admin"
@@ -45,15 +47,7 @@ export default function AppRouter() {
                 <Route path="restaurants" element={<RestaurantsPage />} />
                 <Route path="restaurants/new" element={<AddRestaurantPage />} />
                 <Route path="restaurants/:restaurantId" element={<RestaurantDetailPage />} />
-                <Route
-                  path="qr"
-                  element={
-                    <AdminPlaceholder
-                      title="QR Management"
-                      description="Prepare restaurant → branch → table → unique QR codes (/r/{slug}/t/{token})."
-                    />
-                  }
-                />
+                <Route path="qr" element={<AdminQrPage />} />
                 <Route
                   path="analytics"
                   element={
@@ -83,7 +77,6 @@ export default function AppRouter() {
                 />
               </Route>
 
-              {/* Restaurant Portal (static paths ranked above :restaurantSlug) */}
               <Route path="/restaurant-login" element={<RestaurantLogin />} />
               <Route
                 path="/restaurant"
@@ -122,10 +115,9 @@ export default function AppRouter() {
                 <Route
                   path="profile"
                   element={
-                    <RestaurantPlaceholder
-                      title="Restaurant Profile"
-                      description="Update restaurant name, address, phone, and branding."
-                    />
+                    <ProtectedRestaurantRoute permission="manageProfile">
+                      <RestaurantProfilePage />
+                    </ProtectedRestaurantRoute>
                   }
                 />
                 <Route
@@ -167,10 +159,9 @@ export default function AppRouter() {
                 <Route
                   path="qr"
                   element={
-                    <RestaurantPlaceholder
-                      title="QR Codes"
-                      description="Generate QR codes for /r/{slug}/t/{token}."
-                    />
+                    <ProtectedRestaurantRoute permission="manageQr">
+                      <RestaurantQrPage />
+                    </ProtectedRestaurantRoute>
                   }
                 />
                 <Route
@@ -184,7 +175,8 @@ export default function AppRouter() {
                 />
               </Route>
 
-              {/* Public restaurant discovery / menu */}
+              <Route path="/r/:restaurantSlug/t/:token" element={<PublicRestaurantPage />} />
+              <Route path="/r/:restaurantSlug" element={<PublicRestaurantPage />} />
               <Route path="/restaurant/:restaurantSlug" element={<PublicRestaurantPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
